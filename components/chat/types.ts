@@ -28,6 +28,8 @@ export type ReactionSummary = {
   reactedByMe: boolean;
 };
 
+export type MessageDeliveryStatus = "sent" | "delivered" | "read";
+
 export type ConversationMessage = {
   _id: Id<"messages">;
   senderId: Id<"users">;
@@ -44,5 +46,6 @@ export type ConversationMessage = {
   deletedAt: number | null;
   isDeleted: boolean;
   isMine: boolean;
+  deliveryStatus: MessageDeliveryStatus | null;
   reactions: ReactionSummary[];
 };

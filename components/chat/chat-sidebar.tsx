@@ -204,7 +204,14 @@ export function ChatSidebar({
                 >
                   <UsersRound className="h-4 w-4" />
                 </button>
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
+                  aria-label="Settings"
+                >
                 <UserButton afterSignOutUrl="/sign-in" />
+                  
+                </button>
               </div>
             </div>
 

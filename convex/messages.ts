@@ -163,6 +163,34 @@ async function buildSenderMap(ctx: QueryCtx, messageSenderIds: Id<"users">[]) {
   );
 }
 
+type DeliveryStatus = "sent" | "delivered" | "read";
+
+function getDeliveryStatusForSenderMessage({
+  messageCreatedAt,
+  recipientMemberReadTimes,
+  recipientPresenceLastSeenAt,
+}: {
+  messageCreatedAt: number;
+  recipientMemberReadTimes: number[];
+  recipientPresenceLastSeenAt: number[];
+}): DeliveryStatus {
+  if (recipientMemberReadTimes.length === 0) {
+    return "sent";
+  }
+
+  const allRecipientsRead = recipientMemberReadTimes.every(
+    (lastReadAt) => lastReadAt >= messageCreatedAt,
+  );
+  if (allRecipientsRead) {
+    return "read";
+  }
+
+  const allRecipientsDelivered = recipientPresenceLastSeenAt.every(
+    (lastSeenAt) => lastSeenAt >= messageCreatedAt,
+  );
+  return allRecipientsDelivered ? "delivered" : "sent";
+}
+
 export const listForConversation = query({
   args: {
     conversationId: v.id("conversations"),
@@ -170,6 +198,22 @@ export const listForConversation = query({
   handler: async (ctx, args) => {
     const me = await requireUser(ctx);
     await requireConversationMember(ctx, args.conversationId, me._id);
+
+    const members = await ctx.db
+      .query("conversationMembers")
+      .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
+      .collect();
+    const recipientMembers = members.filter((member) => member.userId !== me._id);
+    const recipientPresenceEntries = await Promise.all(
+      recipientMembers.map(async (member) => {
+        const presence = await ctx.db
+          .query("presence")
+          .withIndex("by_user_id", (q) => q.eq("userId", member.userId))
+          .unique();
+        return [member.userId, presence?.lastSeenAt ?? 0] as const;
+      }),
+    );
+    const recipientPresenceByUserId = new Map(recipientPresenceEntries);
 
     const messages = await ctx.db
       .query("messages")
@@ -196,6 +240,16 @@ export const listForConversation = query({
           message.fileStorageId && !isDeleted
             ? await ctx.storage.getUrl(message.fileStorageId)
             : null;
+        const deliveryStatus =
+          message.senderId === me._id
+            ? getDeliveryStatusForSenderMessage({
+                messageCreatedAt: message.createdAt,
+                recipientMemberReadTimes: recipientMembers.map((member) => member.lastReadAt),
+                recipientPresenceLastSeenAt: recipientMembers.map(
+                  (member) => recipientPresenceByUserId.get(member.userId) ?? 0,
+                ),
+              })
+            : null;
 
         return {
           _id: message._id,
@@ -213,6 +267,7 @@ export const listForConversation = query({
           deletedAt: message.deletedAt ?? null,
           isDeleted,
           isMine: message.senderId === me._id,
+          deliveryStatus,
           reactions: summarizeReactionsForMessage(message._id, reactions, me._id),
         };
       }),

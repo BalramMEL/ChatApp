@@ -1,10 +1,23 @@
-import { ChevronDown, Download, FileText, Loader2, PencilLine, Trash2 } from "lucide-react";
+import {
+  Check,
+  CheckCheck,
+  ChevronDown,
+  Download,
+  FileText,
+  Loader2,
+  PencilLine,
+  Trash2,
+} from "lucide-react";
 
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatMessageTimestamp } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
-import type { ConversationMessage, ReactionKey } from "../types";
+import type {
+  ConversationMessage,
+  MessageDeliveryStatus,
+  ReactionKey,
+} from "../types";
 import { REACTION_META } from "./constants";
 import { formatFileSize, highlightText } from "./utils";
 
@@ -212,6 +225,9 @@ export function MessageBubble({
             >
               {formatMessageTimestamp(message.createdAt)}
             </p>
+            {message.isMine && message.deliveryStatus ? (
+              <MessageDeliveryIcon status={message.deliveryStatus} />
+            ) : null}
           </div>
         </div>
 
@@ -245,4 +261,21 @@ export function MessageBubble({
       </div>
     </div>
   );
+}
+
+function MessageDeliveryIcon({ status }: { status: MessageDeliveryStatus }) {
+  if (status === "read") {
+    return <CheckCheck className="h-3.5 w-3.5 text-sky-500 dark:text-sky-300" aria-label="Read" />;
+  }
+
+  if (status === "delivered") {
+    return (
+      <CheckCheck
+        className="h-3.5 w-3.5 text-slate-500 dark:text-[#aebac1]"
+        aria-label="Delivered"
+      />
+    );
+  }
+
+  return <Check className="h-3.5 w-3.5 text-slate-500 dark:text-[#aebac1]" aria-label="Sent" />;
 }
