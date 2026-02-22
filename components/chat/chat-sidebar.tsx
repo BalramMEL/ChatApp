@@ -3,11 +3,8 @@
 import { useMemo, useRef, useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 import {
-  CircleDotDashed,
-  EllipsisVertical,
   Loader2,
   MessageCircle,
-  Phone,
   Plus,
   Search,
   Settings,
@@ -129,28 +126,14 @@ export function ChatSidebar({
           <div className="flex w-full flex-col items-center gap-2">
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-200 text-slate-700 dark:bg-[#2a3942] dark:text-[#d1d7db]"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-slate-200 text-slate-700 dark:bg-[#2a3942] dark:text-[#d1d7db]"
               aria-label="Chats"
             >
               <MessageCircle className="h-5 w-5" />
             </button>
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-[#2a3942]"
-              aria-label="Calls"
-            >
-              <Phone className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-[#2a3942]"
-              aria-label="Status"
-            >
-              <CircleDotDashed className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-[#2a3942]"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-[#2a3942]"
               aria-label="Communities"
             >
               <UsersRound className="h-5 w-5" />
@@ -161,7 +144,7 @@ export function ChatSidebar({
           <div className="flex flex-col items-center gap-3">
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-[#2a3942]"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-[#2a3942]"
               aria-label="Settings"
             >
               <Settings className="h-5 w-5" />
@@ -172,7 +155,7 @@ export function ChatSidebar({
                 type="button"
                 onClick={() => profileUploadInputRef.current?.click()}
                 disabled={isUploadingProfile}
-                className="absolute -right-1 -bottom-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-white shadow disabled:opacity-70 dark:bg-slate-200 dark:text-slate-900"
+                className="absolute -right-1 -bottom-1 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-slate-900 text-white shadow disabled:opacity-70 dark:bg-slate-200 dark:text-slate-900"
                 aria-label="Upload profile image"
               >
                 {isUploadingProfile ? (
@@ -208,7 +191,7 @@ export function ChatSidebar({
                 <button
                   type="button"
                   onClick={() => setIsNewChatModalOpen(true)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
                   aria-label="New chat"
                 >
                   <Plus className="h-4 w-4" />
@@ -216,18 +199,12 @@ export function ChatSidebar({
                 <button
                   type="button"
                   onClick={() => setIsGroupModalOpen(true)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
                   aria-label="New group"
                 >
                   <UsersRound className="h-4 w-4" />
                 </button>
                 <UserButton afterSignOutUrl="/sign-in" />
-                <button
-                  type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
-                >
-                  <EllipsisVertical className="h-4 w-4" />
-                </button>
               </div>
             </div>
 
@@ -279,7 +256,7 @@ export function ChatSidebar({
                   key={conversation.conversationId}
                   onClick={() => onConversationSelect(conversation.conversationId)}
                   className={cn(
-                    "mx-2 mt-1 flex w-[calc(100%-1rem)] items-center gap-3 rounded-2xl px-3 py-3 text-left transition",
+                    "mx-2 mt-1 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-left transition",
                     activeConversationId === conversation.conversationId
                       ? "bg-slate-200 dark:bg-[#2a3942]"
                       : "hover:bg-slate-100 dark:hover:bg-[#202c33]",
@@ -369,7 +346,7 @@ export function ChatSidebar({
                 <input
                   value={groupName}
                   onChange={(event) => setGroupName(event.target.value)}
-                  placeholder="Project Team"
+                  placeholder="group name"
                   className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#111b21] dark:text-slate-100"
                 />
               </div>
@@ -423,7 +400,7 @@ export function ChatSidebar({
                 type="button"
                 onClick={handleCreateGroup}
                 disabled={isCreatingGroup}
-                className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-medium text-white disabled:opacity-60 dark:bg-[#25d366] dark:text-[#111b21]"
+                className="inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-medium text-white disabled:opacity-60 dark:bg-[#25d366] dark:text-[#111b21]"
               >
                 {isCreatingGroup ? (
                   <>
@@ -456,7 +433,7 @@ function FilterTab({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1 text-sm transition",
+        "cursor-pointer rounded-full border px-3 py-1 text-sm transition",
         active
           ? "border-emerald-500 bg-emerald-100 text-emerald-700 dark:border-[#25d366] dark:bg-[#103529] dark:text-[#d6fddc]"
           : "border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-[#8696a0] dark:hover:bg-[#2a3942]",
@@ -506,7 +483,7 @@ function UserSelectModal({
                 key={user.id}
                 type="button"
                 onClick={() => void onSelectUser(user.id)}
-                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-slate-100 dark:hover:bg-[#2a3942]"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-slate-100 dark:hover:bg-[#2a3942]"
               >
                 <UserAvatar
                   name={user.name}

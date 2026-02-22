@@ -33,9 +33,13 @@ export type ConversationMessage = {
   senderId: Id<"users">;
   senderName: string;
   senderImageUrl: string | null;
-  messageType: "text" | "image";
+  messageType: "text" | "image" | "file";
   body: string;
   imageUrl: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileMimeType: string | null;
+  fileSize: number | null;
   createdAt: number;
   deletedAt: number | null;
   isDeleted: boolean;

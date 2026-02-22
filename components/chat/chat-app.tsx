@@ -25,6 +25,7 @@ export function ChatApp() {
   const { user, isLoaded, isSignedIn } = useUser();
   const connectionState = useConvexConnectionState();
 
+  const [hasMounted, setHasMounted] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [activeConversationId, setActiveConversationId] = useState<Id<"conversations"> | null>(
     null,
@@ -57,6 +58,10 @@ export function ChatApp() {
   const currentUserEmail = user?.primaryEmailAddress?.emailAddress;
   const currentUserImage = user?.imageUrl ?? null;
   const currentUserId = user?.id;
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !currentUserId) {
@@ -179,6 +184,15 @@ export function ChatApp() {
   const showConnectionWarning =
     connectionState.hasEverConnected && !connectionState.isWebSocketConnected;
 
+  if (!hasMounted) {
+    return (
+      <main
+        suppressHydrationWarning
+        className="h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-white dark:bg-[#0b141a]"
+      />
+    );
+  }
+
   return (
     <main className="h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-white dark:bg-[#0b141a]">
       <div className="h-full w-full">
@@ -237,6 +251,7 @@ export function ChatApp() {
                 conversationId={activeConversationId}
                 conversation={activeConversation}
                 onBack={() => setActiveConversationId(null)}
+                onConversationOpen={setActiveConversationId}
               />
             </section>
           </div>

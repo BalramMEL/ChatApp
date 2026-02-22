@@ -38,6 +38,10 @@ function formatLastMessageText(message: Doc<"messages">) {
     const caption = message.body.trim();
     return caption ? `Photo: ${caption}` : "Photo";
   }
+  if (message.messageType === "file") {
+    const fileName = message.fileName?.trim();
+    return fileName ? `Document: ${fileName}` : "Document";
+  }
   return message.body;
 }
 
@@ -67,6 +71,44 @@ async function updateConversationPreviewFromLatestMessage(
     lastMessageSenderId: latest.senderId,
     updatedAt: Date.now(),
   });
+}
+
+async function clearTypingState(
+  ctx: MutationCtx,
+  conversationId: Id<"conversations">,
+  userId: Id<"users">,
+) {
+  const existingTyping = await ctx.db
+    .query("typingStates")
+    .withIndex("by_conversation_user", (q) =>
+      q.eq("conversationId", conversationId).eq("userId", userId),
+    )
+    .unique();
+  if (existingTyping) {
+    await ctx.db.delete(existingTyping._id);
+  }
+}
+
+async function onOutgoingMessageCreated(
+  ctx: MutationCtx,
+  membershipId: Id<"conversationMembers">,
+  conversationId: Id<"conversations">,
+  senderId: Id<"users">,
+  lastMessageText: string,
+  createdAt: number,
+) {
+  await ctx.db.patch(membershipId, {
+    lastReadAt: createdAt,
+  });
+
+  await ctx.db.patch(conversationId, {
+    lastMessageText,
+    lastMessageAt: createdAt,
+    lastMessageSenderId: senderId,
+    updatedAt: createdAt,
+  });
+
+  await clearTypingState(ctx, conversationId, senderId);
 }
 
 function summarizeReactionsForMessage(
@@ -150,6 +192,10 @@ export const listForConversation = query({
           message.imageStorageId && !isDeleted
             ? await ctx.storage.getUrl(message.imageStorageId)
             : null;
+        const fileUrl =
+          message.fileStorageId && !isDeleted
+            ? await ctx.storage.getUrl(message.fileStorageId)
+            : null;
 
         return {
           _id: message._id,
@@ -159,6 +205,10 @@ export const listForConversation = query({
           messageType: message.messageType ?? "text",
           body: message.body,
           imageUrl,
+          fileUrl,
+          fileName: message.fileName ?? null,
+          fileMimeType: message.fileMimeType ?? null,
+          fileSize: message.fileSize ?? null,
           createdAt: message.createdAt,
           deletedAt: message.deletedAt ?? null,
           isDeleted,
@@ -201,26 +251,14 @@ export const send = mutation({
       createdAt: now,
     });
 
-    await ctx.db.patch(membership._id, {
-      lastReadAt: now,
-    });
-
-    await ctx.db.patch(args.conversationId, {
-      lastMessageText: body,
-      lastMessageAt: now,
-      lastMessageSenderId: me._id,
-      updatedAt: now,
-    });
-
-    const existingTyping = await ctx.db
-      .query("typingStates")
-      .withIndex("by_conversation_user", (q) =>
-        q.eq("conversationId", args.conversationId).eq("userId", me._id),
-      )
-      .unique();
-    if (existingTyping) {
-      await ctx.db.delete(existingTyping._id);
-    }
+    await onOutgoingMessageCreated(
+      ctx,
+      membership._id,
+      args.conversationId,
+      me._id,
+      body,
+      now,
+    );
 
     return messageId;
   },
@@ -247,26 +285,57 @@ export const sendImage = mutation({
       createdAt: now,
     });
 
-    await ctx.db.patch(membership._id, {
-      lastReadAt: now,
-    });
+    await onOutgoingMessageCreated(
+      ctx,
+      membership._id,
+      args.conversationId,
+      me._id,
+      caption ? `Photo: ${caption}` : "Photo",
+      now,
+    );
 
-    await ctx.db.patch(args.conversationId, {
-      lastMessageText: caption ? `Photo: ${caption}` : "Photo",
-      lastMessageAt: now,
-      lastMessageSenderId: me._id,
-      updatedAt: now,
-    });
+    return messageId;
+  },
+});
 
-    const existingTyping = await ctx.db
-      .query("typingStates")
-      .withIndex("by_conversation_user", (q) =>
-        q.eq("conversationId", args.conversationId).eq("userId", me._id),
-      )
-      .unique();
-    if (existingTyping) {
-      await ctx.db.delete(existingTyping._id);
+export const sendFile = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    mimeType: v.optional(v.string()),
+    fileSize: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const me = await requireUser(ctx);
+    const membership = await requireConversationMember(ctx, args.conversationId, me._id);
+
+    const fileName = args.fileName.trim();
+    if (!fileName) {
+      throw new Error("File name is required");
     }
+
+    const now = Date.now();
+    const messageId = await ctx.db.insert("messages", {
+      conversationId: args.conversationId,
+      senderId: me._id,
+      messageType: "file",
+      body: "",
+      fileStorageId: args.storageId,
+      fileName,
+      fileMimeType: args.mimeType,
+      fileSize: args.fileSize,
+      createdAt: now,
+    });
+
+    await onOutgoingMessageCreated(
+      ctx,
+      membership._id,
+      args.conversationId,
+      me._id,
+      `Document: ${fileName}`,
+      now,
+    );
 
     return messageId;
   },
@@ -295,6 +364,41 @@ export const deleteOwn = mutation({
       });
       await updateConversationPreviewFromLatestMessage(ctx, message.conversationId);
     }
+  },
+});
+
+export const editOwn = mutation({
+  args: {
+    messageId: v.id("messages"),
+    body: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const me = await requireUser(ctx);
+    const message = await ctx.db.get(args.messageId);
+    if (!message) {
+      throw new Error("Message not found");
+    }
+
+    await requireConversationMember(ctx, message.conversationId, me._id);
+    if (message.senderId !== me._id) {
+      throw new Error("You can only edit your own messages");
+    }
+    if (message.deletedAt) {
+      throw new Error("Cannot edit a deleted message");
+    }
+    if ((message.messageType ?? "text") !== "text") {
+      throw new Error("Only text messages can be edited");
+    }
+
+    const body = args.body.trim();
+    if (!body) {
+      throw new Error("Message body cannot be empty");
+    }
+
+    await ctx.db.patch(message._id, {
+      body,
+    });
+    await updateConversationPreviewFromLatestMessage(ctx, message.conversationId);
   },
 });
 

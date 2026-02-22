@@ -1,19 +1,17 @@
+﻿
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowLeft,
   FileText,
   Loader2,
   Mic,
-  MoreVertical,
   Paperclip,
-  Phone,
   Search,
   SendHorizontal,
-  Sparkles,
-  Trash2,
   UserPlus,
   Video,
   X,
@@ -22,57 +20,43 @@ import { useMutation, useQuery } from "convex/react";
 
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
-import { formatMessageTimestamp } from "@/lib/time";
-import { cn } from "@/lib/utils";
 
+import { ContactPickerModal } from "./window/contact-picker-modal";
+import { DOCUMENT_ACCEPT, MAX_DOCUMENT_SIZE_BYTES, MAX_IMAGE_SIZE_BYTES } from "./window/constants";
+import { DateDivider } from "./window/date-divider";
+import { DocumentRecipientModal } from "./window/document-recipient-modal";
+import { IconButton } from "./window/icon-button";
+import { MessageBubble } from "./window/message-bubble";
+import { MessageListSkeleton } from "./window/message-list-skeleton";
+import { QuickAction } from "./window/quick-action";
+import {
+  buildTimelineItems,
+  countSearchMatches,
+  formatTypingLabel,
+  isNearBottom,
+  isSupportedDocument,
+  toErrorMessage,
+} from "./window/utils";
 import type { ConversationMessage, ConversationPreview, ReactionKey } from "./types";
 import { UserAvatar } from "./user-avatar";
-
-const REACTION_META: Array<{ key: ReactionKey; label: string }> = [
-  { key: "thumbs_up", label: "\u{1F44D}" },
-  { key: "heart", label: "\u{2764}\u{FE0F}" },
-  { key: "joy", label: "\u{1F602}" },
-  { key: "wow", label: "\u{1F62E}" },
-  { key: "sad", label: "\u{1F622}" },
-];
-const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
 
 type ChatWindowProps = {
   conversationId: Id<"conversations"> | null;
   conversation: ConversationPreview | null;
   onBack: () => void;
+  onConversationOpen: (conversationId: Id<"conversations">) => void;
 };
 
 type FailedSend =
   | { type: "text"; body: string; error: string }
   | { type: "image"; file: File; caption: string; error: string };
 
-function isNearBottom(container: HTMLDivElement) {
-  const distance = container.scrollHeight - container.scrollTop - container.clientHeight;
-  return distance < 80;
-}
-
-function formatTypingLabel(names: string[]) {
-  if (names.length === 0) {
-    return null;
-  }
-  if (names.length === 1) {
-    return `${names[0]} is typing...`;
-  }
-  if (names.length === 2) {
-    return `${names[0]} and ${names[1]} are typing...`;
-  }
-  return `${names[0]} and ${names.length - 1} others are typing...`;
-}
-
-function toErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-  return fallback;
-}
-
-export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowProps) {
+export function ChatWindow({
+  conversationId,
+  conversation,
+  onBack,
+  onConversationOpen,
+}: ChatWindowProps) {
   const fallbackConversation = useQuery(
     api.conversations.getConversationById,
     conversationId ? { conversationId } : "skip",
@@ -85,14 +69,21 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
     api.typing.getTypingForConversation,
     conversationId ? { conversationId } : "skip",
   );
+  const discoverableUsers = useQuery(api.users.listDiscoverable, { search: "" });
+  const allConversations = useQuery(api.conversations.listForCurrentUser);
 
   const sendMessage = useMutation(api.messages.send);
   const sendImage = useMutation(api.messages.sendImage);
+  const sendFile = useMutation(api.messages.sendFile);
   const generateUploadUrl = useMutation(api.messages.generateUploadUrl);
   const deleteOwnMessage = useMutation(api.messages.deleteOwn);
+  const editOwnMessage = useMutation(api.messages.editOwn);
   const toggleReaction = useMutation(api.messages.toggleReaction);
   const markConversationRead = useMutation(api.messages.markConversationRead);
   const setTyping = useMutation(api.typing.setTyping);
+  const getOrCreateDirectConversation = useMutation(
+    api.conversations.getOrCreateDirectConversation,
+  );
 
   const activeConversation = conversation ?? fallbackConversation ?? null;
 
@@ -102,58 +93,82 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
   const [showNewMessagesButton, setShowNewMessagesButton] = useState(false);
   const [failedSend, setFailedSend] = useState<FailedSend | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<Id<"messages"> | null>(null);
+  const [openMenuMessageId, setOpenMenuMessageId] = useState<Id<"messages"> | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<Id<"messages"> | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [pendingReactionKey, setPendingReactionKey] = useState<string | null>(null);
 
+  const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
+  const [contactSearchValue, setContactSearchValue] = useState("");
+  const [pendingContactStartId, setPendingContactStartId] = useState<Id<"users"> | null>(null);
+
+  const [selectedDocumentFile, setSelectedDocumentFile] = useState<File | null>(null);
+  const [isDocumentRecipientModalOpen, setIsDocumentRecipientModalOpen] = useState(false);
+  const [documentRecipientSearch, setDocumentRecipientSearch] = useState("");
+  const [selectedRecipientConversationIds, setSelectedRecipientConversationIds] = useState<
+    Id<"conversations">[]
+  >([]);
+  const [selectedRecipientUserIds, setSelectedRecipientUserIds] = useState<Id<"users">[]>([]);
+  const [isSendingDocument, setIsSendingDocument] = useState(false);
+  const [documentActionError, setDocumentActionError] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const quickDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const nearBottomRef = useRef(true);
   const previousConversationIdRef = useRef<Id<"conversations"> | null>(null);
   const previousMessageIdRef = useRef<Id<"messages"> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const filteredContactUsers = useMemo(() => {
+    if (!discoverableUsers) return [];
+    const term = contactSearchValue.trim().toLowerCase();
+    if (!term) return discoverableUsers;
+    return discoverableUsers.filter((user) => user.name.toLowerCase().includes(term));
+  }, [contactSearchValue, discoverableUsers]);
+
+  const filteredRecipientConversations = useMemo(() => {
+    if (!allConversations) return [];
+    const term = documentRecipientSearch.trim().toLowerCase();
+    if (!term) return allConversations;
+    return allConversations.filter((item) => item.name.toLowerCase().includes(term));
+  }, [allConversations, documentRecipientSearch]);
+
+  const filteredRecipientUsers = useMemo(() => {
+    if (!discoverableUsers) return [];
+    const term = documentRecipientSearch.trim().toLowerCase();
+    if (!term) return discoverableUsers;
+    return discoverableUsers.filter((user) => user.name.toLowerCase().includes(term));
+  }, [discoverableUsers, documentRecipientSearch]);
+
   const stopTyping = useCallback(
     (targetConversationId: Id<"conversations"> | null) => {
-      if (!targetConversationId) {
-        return;
-      }
-      void setTyping({
-        conversationId: targetConversationId,
-        isTyping: false,
-      });
+      if (!targetConversationId) return;
+      void setTyping({ conversationId: targetConversationId, isTyping: false });
     },
     [setTyping],
   );
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior) => {
     const container = messageListRef.current;
-    if (!container) {
-      return;
-    }
-
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior,
-    });
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior });
     nearBottomRef.current = true;
   }, []);
 
   const sendText = useCallback(
     async (body: string) => {
-      if (!conversationId) {
-        return false;
-      }
-
+      if (!conversationId) return false;
       try {
         await sendMessage({ conversationId, body });
         await markConversationRead({ conversationId });
         return true;
       } catch (error) {
-        setFailedSend({
-          type: "text",
-          body,
-          error: toErrorMessage(error, "Failed to send message."),
-        });
+        setFailedSend({ type: "text", body, error: toErrorMessage(error, "Failed to send message.") });
         return false;
       }
     },
@@ -162,9 +177,7 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
 
   const sendImageFile = useCallback(
     async (file: File, caption: string) => {
-      if (!conversationId) {
-        return false;
-      }
+      if (!conversationId) return false;
 
       try {
         const uploadUrl = await generateUploadUrl({});
@@ -205,24 +218,130 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
     [conversationId, generateUploadUrl, markConversationRead, sendImage],
   );
 
+  const resetDocumentRecipientModalState = () => {
+    setSelectedDocumentFile(null);
+    setDocumentRecipientSearch("");
+    setSelectedRecipientConversationIds([]);
+    setSelectedRecipientUserIds([]);
+    setDocumentActionError(null);
+    setIsDocumentRecipientModalOpen(false);
+  };
+
+  const handleDocumentFileSelected = (file: File) => {
+    if (!isSupportedDocument(file)) {
+      setDocumentActionError("Unsupported document type.");
+      return;
+    }
+    if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+      setDocumentActionError("Document is too large. Please use a file under 15 MB.");
+      return;
+    }
+
+    setSelectedDocumentFile(file);
+    setDocumentRecipientSearch("");
+    setSelectedRecipientConversationIds([]);
+    setSelectedRecipientUserIds([]);
+    setDocumentActionError(null);
+    setIsDocumentRecipientModalOpen(true);
+  };
+
+  const handleSendDocumentToRecipients = async () => {
+    if (!selectedDocumentFile) {
+      setDocumentActionError("Select a document first.");
+      return;
+    }
+
+    if (selectedRecipientConversationIds.length === 0 && selectedRecipientUserIds.length === 0) {
+      setDocumentActionError("Select at least one recipient.");
+      return;
+    }
+
+    setIsSendingDocument(true);
+    setDocumentActionError(null);
+
+    try {
+      const uploadUrl = await generateUploadUrl({});
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": selectedDocumentFile.type || "application/octet-stream",
+        },
+        body: selectedDocumentFile,
+      });
+      if (!uploadResponse.ok) {
+        throw new Error("Document upload failed");
+      }
+
+      const uploadResult = (await uploadResponse.json()) as { storageId?: Id<"_storage"> };
+      if (!uploadResult.storageId) {
+        throw new Error("Upload did not return a storage id");
+      }
+
+      const recipientConversationIds = new Set<Id<"conversations">>(selectedRecipientConversationIds);
+      for (const userId of selectedRecipientUserIds) {
+        const conversationForUser = await getOrCreateDirectConversation({ otherUserId: userId });
+        recipientConversationIds.add(conversationForUser);
+      }
+
+      const targetConversationIds = [...recipientConversationIds];
+      await Promise.all(
+        targetConversationIds.map((targetConversationId) =>
+          sendFile({
+            conversationId: targetConversationId,
+            storageId: uploadResult.storageId!,
+            fileName: selectedDocumentFile.name,
+            mimeType: selectedDocumentFile.type || undefined,
+            fileSize: selectedDocumentFile.size,
+          }),
+        ),
+      );
+
+      if (targetConversationIds.length > 0) {
+        onConversationOpen(targetConversationIds[0]);
+      }
+
+      resetDocumentRecipientModalState();
+    } catch (error) {
+      setDocumentActionError(toErrorMessage(error, "Failed to send document."));
+    } finally {
+      setIsSendingDocument(false);
+    }
+  };
+
+  const handleStartConversationFromContact = async (userId: Id<"users">) => {
+    setPendingContactStartId(userId);
+    setActionError(null);
+    try {
+      const openedConversationId = await getOrCreateDirectConversation({ otherUserId: userId });
+      setIsContactPickerOpen(false);
+      setContactSearchValue("");
+      onConversationOpen(openedConversationId);
+    } catch (error) {
+      setActionError(toErrorMessage(error, "Failed to start conversation."));
+    } finally {
+      setPendingContactStartId(null);
+    }
+  };
+
   useEffect(() => {
     setDraft("");
     setShowNewMessagesButton(false);
     setFailedSend(null);
     setActionError(null);
+    setIsSearchOpen(false);
+    setMessageSearchQuery("");
+    setOpenMenuMessageId(null);
+    setEditingMessageId(null);
+    setEditDraft("");
     previousMessageIdRef.current = null;
     nearBottomRef.current = true;
   }, [conversationId]);
 
   useEffect(() => {
-    if (!conversationId || !messages) {
-      return;
-    }
+    if (!conversationId || !messages) return;
 
     const container = messageListRef.current;
-    if (!container) {
-      return;
-    }
+    if (!container) return;
 
     const latestMessageId = messages.length > 0 ? messages[messages.length - 1]._id : null;
     const conversationChanged = previousConversationIdRef.current !== conversationId;
@@ -246,87 +365,78 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
   }, [conversationId, messages, scrollToBottom]);
 
   useEffect(() => {
-    if (!conversationId || !messages) {
-      return;
-    }
+    if (!conversationId || !messages) return;
     void markConversationRead({ conversationId });
   }, [conversationId, messages, markConversationRead]);
 
   useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+    if (!openMenuMessageId) {
+      return;
+    }
+
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-message-menu-root='true']")) {
+        return;
       }
+      setOpenMenuMessageId(null);
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [openMenuMessageId]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, []);
 
   useEffect(() => {
     return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       stopTyping(conversationId);
     };
   }, [conversationId, stopTyping]);
 
   const handleScroll = () => {
     const container = messageListRef.current;
-    if (!container) {
-      return;
-    }
+    if (!container) return;
     const nearBottom = isNearBottom(container);
     nearBottomRef.current = nearBottom;
-
-    if (nearBottom) {
-      setShowNewMessagesButton(false);
-    }
+    if (nearBottom) setShowNewMessagesButton(false);
   };
 
   const handleDraftChange = (value: string) => {
     setDraft(value);
 
-    if (!conversationId) {
-      return;
-    }
+    if (!conversationId) return;
 
     if (!value.trim()) {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       stopTyping(conversationId);
       return;
     }
 
-    void setTyping({
-      conversationId,
-      isTyping: true,
-    });
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+    void setTyping({ conversationId, isTyping: true });
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => stopTyping(conversationId), 2_000);
   };
 
-  const handleSend = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSend = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    if (!conversationId) {
-      return;
-    }
+    if (!conversationId) return;
 
     const messageBody = draft.trim();
-    if (!messageBody) {
-      return;
-    }
+    if (!messageBody) return;
 
     setDraft("");
     setIsSending(true);
     setActionError(null);
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     stopTyping(conversationId);
 
     try {
@@ -337,9 +447,7 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
   };
 
   const handleImageSelected = async (file: File) => {
-    if (!conversationId) {
-      return;
-    }
+    if (!conversationId) return;
     if (!file.type.startsWith("image/")) {
       setActionError("Only image files are supported.");
       return;
@@ -354,25 +462,19 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
     const caption = draft;
     setDraft("");
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     stopTyping(conversationId);
 
     try {
       const sent = await sendImageFile(file, caption);
-      if (!sent) {
-        setDraft(caption);
-      }
+      if (!sent) setDraft(caption);
     } finally {
       setIsUploadingImage(false);
     }
   };
 
   const handleRetryFailedSend = async () => {
-    if (!failedSend) {
-      return;
-    }
+    if (!failedSend) return;
 
     setIsSending(true);
     const retry = failedSend;
@@ -381,14 +483,10 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
     try {
       if (retry.type === "text") {
         const sent = await sendText(retry.body);
-        if (!sent) {
-          setDraft(retry.body);
-        }
+        if (!sent) setDraft(retry.body);
       } else {
         const sent = await sendImageFile(retry.file, retry.caption);
-        if (!sent) {
-          setDraft(retry.caption);
-        }
+        if (!sent) setDraft(retry.caption);
       }
     } finally {
       setIsSending(false);
@@ -397,6 +495,7 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
 
   const handleDeleteMessage = async (messageId: Id<"messages">) => {
     setPendingDeleteMessageId(messageId);
+    setOpenMenuMessageId(null);
     setActionError(null);
 
     try {
@@ -422,24 +521,137 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
     }
   };
 
+  const handleStartEdit = (message: ConversationMessage) => {
+    if (!message.isMine || message.isDeleted || message.messageType !== "text") {
+      return;
+    }
+    setOpenMenuMessageId(null);
+    setEditingMessageId(message._id);
+    setEditDraft(message.body);
+    setActionError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditDraft("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMessageId) {
+      return;
+    }
+
+    const nextBody = editDraft.trim();
+    if (!nextBody) {
+      setActionError("Message body cannot be empty.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setActionError(null);
+    try {
+      await editOwnMessage({
+        messageId: editingMessageId,
+        body: nextBody,
+      });
+      setEditingMessageId(null);
+      setEditDraft("");
+    } catch (error) {
+      setActionError(toErrorMessage(error, "Failed to edit message."));
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   if (!conversationId) {
     return (
-      <div className="flex h-full items-center justify-center bg-slate-50 dark:bg-[#0b141a]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="grid grid-cols-3 gap-6">
-            <QuickAction title="Send document" icon={<FileText className="h-6 w-6" />} />
-            <QuickAction title="Add contact" icon={<UserPlus className="h-6 w-6" />} />
-            <QuickAction title="Ask AI" icon={<Sparkles className="h-6 w-6" />} />
+      <>
+        <div className="flex h-full items-center justify-center bg-slate-50 dark:bg-[#0b141a]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="grid grid-cols-2 gap-6">
+              <QuickAction
+                title="Send document"
+                icon={<FileText className="h-6 w-6" />}
+                onClick={() => quickDocumentInputRef.current?.click()}
+              />
+              <QuickAction
+                title="Add contact"
+                icon={<UserPlus className="h-6 w-6" />}
+                onClick={() => setIsContactPickerOpen(true)}
+              />
+            </div>
+            <input
+              ref={quickDocumentInputRef}
+              type="file"
+              accept={DOCUMENT_ACCEPT}
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) handleDocumentFileSelected(file);
+                event.currentTarget.value = "";
+              }}
+            />
+            {documentActionError ? (
+              <p className="text-xs text-rose-600 dark:text-rose-300">{documentActionError}</p>
+            ) : null}
+            <p className="text-sm text-slate-500 dark:text-[#8696a0]">
+              Select a chat to start messaging.
+            </p>
           </div>
-          <p className="text-sm text-slate-500 dark:text-[#8696a0]">
-            Select a chat to start messaging.
-          </p>
         </div>
-      </div>
+
+        {isContactPickerOpen ? (
+          <ContactPickerModal
+            users={filteredContactUsers}
+            searchValue={contactSearchValue}
+            pendingUserId={pendingContactStartId}
+            onSearchChange={setContactSearchValue}
+            onClose={() => {
+              setIsContactPickerOpen(false);
+              setContactSearchValue("");
+            }}
+            onSelectUser={(userId) => void handleStartConversationFromContact(userId)}
+          />
+        ) : null}
+
+        {isDocumentRecipientModalOpen ? (
+          <DocumentRecipientModal
+            selectedFile={selectedDocumentFile}
+            searchValue={documentRecipientSearch}
+            conversations={filteredRecipientConversations}
+            users={filteredRecipientUsers}
+            selectedConversationIds={selectedRecipientConversationIds}
+            selectedUserIds={selectedRecipientUserIds}
+            isSending={isSendingDocument}
+            error={documentActionError}
+            onSearchChange={setDocumentRecipientSearch}
+            onToggleConversation={(targetConversationId) =>
+              setSelectedRecipientConversationIds((previous) =>
+                previous.includes(targetConversationId)
+                  ? previous.filter((id) => id !== targetConversationId)
+                  : [...previous, targetConversationId],
+              )
+            }
+            onToggleUser={(targetUserId) =>
+              setSelectedRecipientUserIds((previous) =>
+                previous.includes(targetUserId)
+                  ? previous.filter((id) => id !== targetUserId)
+                  : [...previous, targetUserId],
+              )
+            }
+            onClose={resetDocumentRecipientModalState}
+            onSend={() => void handleSendDocumentToRecipients()}
+          />
+        ) : null}
+      </>
     );
   }
 
   const typingLabel = formatTypingLabel(typingState?.names ?? []);
+  const trimmedSearchQuery = messageSearchQuery.trim();
+
+  const timelineItems = buildTimelineItems(messages);
+  const searchMatchCount = countSearchMatches(messages, trimmedSearchQuery);
 
   return (
     <div className="flex h-full flex-col bg-slate-50 dark:bg-[#0b141a]">
@@ -448,7 +660,7 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
           <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={onBack}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-700 md:hidden dark:border-[#3b4a54] dark:text-slate-200"
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 md:hidden dark:border-[#3b4a54] dark:text-slate-200"
               aria-label="Back to conversations"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -481,12 +693,44 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
 
           <div className="flex items-center gap-1">
             <IconButton icon={<Video className="h-4 w-4" />} label="Video call" />
-            <IconButton icon={<Phone className="h-4 w-4" />} label="Call" />
-            <IconButton icon={<Search className="h-4 w-4" />} label="Search messages" />
-            <IconButton icon={<MoreVertical className="h-4 w-4" />} label="More options" />
+            <IconButton
+              icon={<Search className="h-4 w-4" />}
+              label={isSearchOpen ? "Close search" : "Search messages"}
+              active={isSearchOpen}
+              onClick={() => setIsSearchOpen((previous) => !previous)}
+            />
           </div>
         </div>
       </header>
+
+      {isSearchOpen ? (
+        <div className="border-b border-slate-200 bg-white px-4 py-2 dark:border-[#2a3942] dark:bg-[#202c33]">
+          <div className="flex items-center gap-2">
+            <input
+              value={messageSearchQuery}
+              onChange={(event) => setMessageSearchQuery(event.target.value)}
+              placeholder="Search in chat"
+              className="h-9 flex-1 rounded-full border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#111b21] dark:text-slate-100"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setMessageSearchQuery("");
+                setIsSearchOpen(false);
+              }}
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 dark:border-[#3b4a54] dark:text-slate-300"
+              aria-label="Close message search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#8696a0]">
+            {trimmedSearchQuery
+              ? `${searchMatchCount} match${searchMatchCount === 1 ? "" : "es"}`
+              : "Type to highlight matching text in messages"}
+          </p>
+        </div>
+      ) : null}
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div
@@ -495,33 +739,45 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
           className="chat-message-surface min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
         >
           {messages === undefined ? (
-            <div className="space-y-3">
-              <div className="h-16 animate-pulse rounded-2xl bg-slate-200 dark:bg-[#2a3942]" />
-              <div className="h-16 animate-pulse rounded-2xl bg-slate-200 dark:bg-[#2a3942]" />
-              <div className="h-16 animate-pulse rounded-2xl bg-slate-200 dark:bg-[#2a3942]" />
-            </div>
+            <MessageListSkeleton />
           ) : messages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-8 text-center dark:border-[#3b4a54] dark:bg-[#202c33]">
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                  No messages yet
-                </p>
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">No messages yet</p>
                 <p className="mt-1 text-xs text-slate-500 dark:text-[#8696a0]">
                   Send the first message to start this conversation.
                 </p>
               </div>
             </div>
           ) : (
-            messages.map((message) => (
-              <MessageBubble
-                key={message._id}
-                message={message}
-                isDeleting={pendingDeleteMessageId === message._id}
-                pendingReactionKey={pendingReactionKey}
-                onDelete={handleDeleteMessage}
-                onToggleReaction={handleToggleReaction}
-              />
-            ))
+            timelineItems.map((item) =>
+              item.type === "divider" ? (
+                <DateDivider key={item.key} label={item.label} />
+              ) : (
+                <MessageBubble
+                  key={item.key}
+                  message={item.message}
+                  isDeleting={pendingDeleteMessageId === item.message._id}
+                  isMenuOpen={openMenuMessageId === item.message._id}
+                  isEditing={editingMessageId === item.message._id}
+                  isSavingEdit={isSavingEdit}
+                  editDraft={editDraft}
+                  searchQuery={trimmedSearchQuery}
+                  pendingReactionKey={pendingReactionKey}
+                  onToggleMenu={() =>
+                    setOpenMenuMessageId((previous) =>
+                      previous === item.message._id ? null : item.message._id,
+                    )
+                  }
+                  onStartEdit={() => handleStartEdit(item.message)}
+                  onEditDraftChange={setEditDraft}
+                  onSaveEdit={() => void handleSaveEdit()}
+                  onCancelEdit={handleCancelEdit}
+                  onDelete={handleDeleteMessage}
+                  onToggleReaction={handleToggleReaction}
+                />
+              ),
+            )
           )}
         </div>
 
@@ -531,7 +787,7 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
               scrollToBottom("smooth");
               setShowNewMessagesButton(false);
             }}
-            className="absolute right-4 bottom-20 inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg dark:bg-[#25d366] dark:text-[#111b21]"
+            className="absolute right-4 bottom-20 inline-flex cursor-pointer items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg dark:bg-[#25d366] dark:text-[#111b21]"
           >
             <ArrowDown className="h-3.5 w-3.5" />
             New messages
@@ -540,13 +796,8 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
 
         <div className="min-h-6 px-4 text-xs text-slate-500 dark:text-[#8696a0]">
           {typingLabel ? (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 dark:bg-[#202c33]">
+            <div className="inline-flex items-center mb-1 gap-1.5 rounded-full bg-white px-2.5 py-1 dark:bg-[#202c33]">
               <span>{typingLabel}</span>
-              <span className="inline-flex gap-0.5">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-500 dark:bg-slate-300 [animation-delay:0ms]" />
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-500 dark:bg-slate-300 [animation-delay:180ms]" />
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-500 dark:bg-slate-300 [animation-delay:360ms]" />
-              </span>
             </div>
           ) : null}
         </div>
@@ -558,14 +809,14 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
               <button
                 type="button"
                 onClick={handleRetryFailedSend}
-                className="rounded-md border border-rose-300 px-2 py-1 font-medium dark:border-rose-700"
+                className="cursor-pointer rounded-md border border-rose-300 px-2 py-1 font-medium dark:border-rose-700"
               >
                 Retry
               </button>
               <button
                 type="button"
                 onClick={() => setFailedSend(null)}
-                className="rounded-md border border-rose-300 px-2 py-1 dark:border-rose-700"
+                className="cursor-pointer rounded-md border border-rose-300 px-2 py-1 dark:border-rose-700"
               >
                 Dismiss
               </button>
@@ -579,7 +830,7 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
             <button
               type="button"
               onClick={() => setActionError(null)}
-              className="inline-flex h-5 w-5 items-center justify-center rounded border border-amber-300 dark:border-amber-700"
+              className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded border border-amber-300 dark:border-amber-700"
               aria-label="Dismiss warning"
             >
               <X className="h-3 w-3" />
@@ -596,14 +847,10 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploadingImage}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-60 dark:border-[#3b4a54] dark:text-slate-200 dark:hover:bg-[#2a3942]"
+              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-60 dark:border-[#3b4a54] dark:text-slate-200 dark:hover:bg-[#2a3942]"
               aria-label="Send image"
             >
-              {isUploadingImage ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Paperclip className="h-4 w-4" />
-              )}
+              {isUploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
             </button>
             <input
               ref={fileInputRef}
@@ -612,9 +859,7 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
               className="hidden"
               onChange={(event) => {
                 const file = event.target.files?.[0];
-                if (file) {
-                  void handleImageSelected(file);
-                }
+                if (file) void handleImageSelected(file);
                 event.currentTarget.value = "";
               }}
             />
@@ -635,157 +880,12 @@ export function ChatWindow({ conversationId, conversation, onBack }: ChatWindowP
             <button
               type="submit"
               disabled={isSending || !draft.trim()}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white transition disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#25d366] dark:text-[#111b21]"
+              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-slate-900 text-white transition disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#25d366] dark:text-[#111b21]"
             >
-              {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <SendHorizontal className="h-4 w-4" />
-              )}
+              {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
             </button>
           </div>
         </form>
-      </div>
-    </div>
-  );
-}
-
-function QuickAction({ title, icon }: { title: string; icon: React.ReactNode }) {
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-slate-200 text-slate-600 dark:bg-[#202c33] dark:text-[#8696a0]">
-        {icon}
-      </div>
-      <p className="text-sm text-slate-500 dark:text-[#8696a0]">{title}</p>
-    </div>
-  );
-}
-
-function IconButton({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
-    >
-      {icon}
-    </button>
-  );
-}
-
-function MessageBubble({
-  message,
-  isDeleting,
-  pendingReactionKey,
-  onDelete,
-  onToggleReaction,
-}: {
-  message: ConversationMessage;
-  isDeleting: boolean;
-  pendingReactionKey: string | null;
-  onDelete: (messageId: Id<"messages">) => void;
-  onToggleReaction: (messageId: Id<"messages">, emoji: ReactionKey) => void;
-}) {
-  return (
-    <div className={cn("flex", message.isMine ? "justify-end" : "justify-start")}>
-      <div className="max-w-[min(86%,42rem)]">
-        <div
-          className={cn(
-            "rounded-2xl px-3 py-2",
-            message.isMine
-              ? "rounded-tr-sm bg-emerald-100 text-slate-900 dark:bg-[#005c4b] dark:text-[#e9edef]"
-              : "rounded-tl-sm bg-white text-slate-900 shadow-sm dark:bg-[#202c33] dark:text-[#e9edef]",
-          )}
-        >
-          {!message.isMine ? (
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-[#8696a0]">
-              {message.senderName}
-            </p>
-          ) : null}
-
-          {message.isDeleted ? (
-            <p className="text-sm italic text-slate-500 dark:text-[#aebac1]">This message was deleted</p>
-          ) : message.messageType === "image" ? (
-            <div className="space-y-2">
-              {message.imageUrl ? (
-                <>
-                  {/* Convex storage URLs are already optimized and short-lived signed links. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={message.imageUrl}
-                    alt="Shared media"
-                    className="max-h-96 w-full max-w-[420px] rounded-lg object-cover"
-                  />
-                </>
-              ) : (
-                <div className="flex h-40 w-[260px] items-center justify-center rounded-lg bg-slate-200 text-slate-500 dark:bg-[#2a3942] dark:text-[#8696a0]">
-                  Image unavailable
-                </div>
-              )}
-              {message.body.trim() ? (
-                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.body}</p>
-              ) : null}
-            </div>
-          ) : (
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.body}</p>
-          )}
-
-          <div className="mt-1 flex items-center justify-between gap-3">
-            <p
-              className={cn(
-                "text-[11px]",
-                message.isMine ? "text-slate-500 dark:text-[#aebac1]" : "text-slate-500 dark:text-[#8696a0]",
-              )}
-              suppressHydrationWarning
-            >
-              {formatMessageTimestamp(message.createdAt)}
-            </p>
-
-            {message.isMine && !message.isDeleted ? (
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => onDelete(message._id)}
-                className="inline-flex items-center gap-1 text-[11px] text-rose-600 transition hover:text-rose-500 disabled:opacity-60 dark:text-rose-300 dark:hover:text-rose-200"
-              >
-                {isDeleting ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3 w-3" />
-                )}
-                Delete
-              </button>
-            ) : null}
-          </div>
-        </div>
-
-        <div className={cn("mt-1 flex flex-wrap gap-1", message.isMine ? "justify-end" : "justify-start")}>
-          {REACTION_META.map(({ key, label }) => {
-            const reaction = message.reactions.find((item) => item.emoji === key);
-            const count = reaction?.count ?? 0;
-            const isActive = reaction?.reactedByMe ?? false;
-            const reactionKey = `${message._id}:${key}`;
-            const isPending = pendingReactionKey === reactionKey;
-
-            return (
-              <button
-                key={key}
-                type="button"
-                disabled={isPending}
-                onClick={() => onToggleReaction(message._id, key)}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition",
-                  isActive
-                    ? "border-slate-900 bg-slate-900 text-white dark:border-[#25d366] dark:bg-[#25d366] dark:text-[#111b21]"
-                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:bg-[#202c33] dark:text-[#d1d7db] dark:hover:bg-[#2a3942]",
-                )}
-              >
-                <span>{label}</span>
-                {count > 0 ? <span>{count}</span> : null}
-              </button>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
