@@ -188,15 +188,15 @@ export function ChatApp() {
     return (
       <main
         suppressHydrationWarning
-        className="h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-white dark:bg-[#0b141a]"
+        className="h-screen bg-gradient-to-br from-slate-200 via-slate-100 to-slate-50 dark:bg-[#0b141a]"
       />
     );
   }
 
   return (
-    <main className="h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-white dark:bg-[#0b141a]">
+    <main className="h-screen bg-gradient-to-br from-slate-200 via-slate-100 to-slate-50 dark:bg-[#0b141a]">
       <div className="h-full w-full">
-        <div className="h-full overflow-hidden bg-white ring-1 ring-slate-200 dark:bg-[#111b21] dark:ring-[#1f2c34]">
+        <div className="h-full overflow-hidden bg-slate-100 ring-1 ring-slate-300 dark:bg-[#111b21] dark:ring-[#1f2c34]">
           {showConnectionWarning ? (
             <div className="flex items-center gap-2 border-b border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-200">
               <WifiOff className="h-4 w-4" />
@@ -223,7 +223,7 @@ export function ChatApp() {
           <div className="flex h-full">
             <aside
               className={cn(
-                "h-full w-full md:w-[470px] md:border-r md:border-slate-200 md:dark:border-[#2a3942]",
+                "h-full w-full md:w-[470px] md:border-r md:border-slate-300 md:dark:border-[#2a3942]",
                 mobileChatOpen ? "hidden md:block" : "block",
               )}
             >

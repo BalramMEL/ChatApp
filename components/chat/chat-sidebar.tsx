@@ -121,8 +121,8 @@ export function ChatSidebar({
 
   return (
     <>
-      <div className="flex h-full bg-white dark:bg-[#111b21]">
-        <div className="hidden w-[72px] flex-col items-center justify-between border-r border-slate-200 bg-slate-100 py-3 dark:border-[#2a3942] dark:bg-[#202c33] md:flex">
+      <div className="flex h-full bg-slate-100 dark:bg-[#111b21]">
+        <div className="hidden w-[72px] flex-col items-center justify-between border-r border-slate-300 bg-slate-200 py-3 dark:border-[#2a3942] dark:bg-[#202c33] md:flex">
           <div className="flex w-full flex-col items-center gap-2">
             <button
               type="button"
@@ -182,7 +182,7 @@ export function ChatSidebar({
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="border-b border-slate-200 px-4 py-3 dark:border-[#2a3942]">
+          <div className="border-b border-slate-300 px-4 py-3 dark:border-[#2a3942]">
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl dark:text-slate-100">
                 Chats
@@ -221,7 +221,7 @@ export function ChatSidebar({
                 value={searchValue}
                 onChange={(event) => onSearchChange(event.target.value)}
                 placeholder="Search or start a new chat"
-                className="h-11 w-full rounded-full border border-slate-300 bg-white pl-9 pr-4 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#2a3942] dark:text-slate-100 dark:focus:border-[#8696a0]"
+                className="h-11 w-full rounded-full border border-slate-400 bg-slate-50 pl-9 pr-4 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#2a3942] dark:text-slate-100 dark:focus:border-[#8696a0]"
               />
             </div>
 
@@ -265,8 +265,8 @@ export function ChatSidebar({
                   className={cn(
                     "mx-2 mt-1 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-left transition",
                     activeConversationId === conversation.conversationId
-                      ? "bg-slate-200 dark:bg-[#2a3942]"
-                      : "hover:bg-slate-100 dark:hover:bg-[#202c33]",
+                      ? "bg-slate-300 dark:bg-[#2a3942]"
+                      : "hover:bg-slate-200 dark:hover:bg-[#202c33]",
                   )}
                 >
                   <UserAvatar
@@ -521,9 +521,9 @@ function UserSelectModal({
 function SidebarSkeletonRows() {
   return (
     <div className="space-y-2 px-3 py-3">
-      <div className="h-14 animate-pulse rounded-xl bg-slate-200 dark:bg-[#2a3942]" />
-      <div className="h-14 animate-pulse rounded-xl bg-slate-200 dark:bg-[#2a3942]" />
-      <div className="h-14 animate-pulse rounded-xl bg-slate-200 dark:bg-[#2a3942]" />
+      <div className="h-14 animate-pulse rounded-xl bg-slate-300 dark:bg-[#2a3942]" />
+      <div className="h-14 animate-pulse rounded-xl bg-slate-300 dark:bg-[#2a3942]" />
+      <div className="h-14 animate-pulse rounded-xl bg-slate-300 dark:bg-[#2a3942]" />
     </div>
   );
 }

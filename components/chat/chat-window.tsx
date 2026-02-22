@@ -566,7 +566,7 @@ export function ChatWindow({
   if (!conversationId) {
     return (
       <>
-        <div className="flex h-full items-center justify-center bg-slate-50 dark:bg-[#0b141a]">
+        <div className="flex h-full items-center justify-center bg-slate-100 dark:bg-[#0b141a]">
           <div className="flex flex-col items-center gap-4">
             <div className="grid grid-cols-2 gap-6">
               <QuickAction
@@ -654,8 +654,8 @@ export function ChatWindow({
   const searchMatchCount = countSearchMatches(messages, trimmedSearchQuery);
 
   return (
-    <div className="flex h-full flex-col bg-slate-50 dark:bg-[#0b141a]">
-      <header className="border-b border-slate-200 bg-white px-4 py-3 dark:border-[#2a3942] dark:bg-[#202c33]">
+    <div className="flex h-full flex-col bg-slate-100 dark:bg-[#0b141a]">
+      <header className="border-b border-slate-300 bg-slate-100 px-4 py-3 dark:border-[#2a3942] dark:bg-[#202c33]">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -704,13 +704,13 @@ export function ChatWindow({
       </header>
 
       {isSearchOpen ? (
-        <div className="border-b border-slate-200 bg-white px-4 py-2 dark:border-[#2a3942] dark:bg-[#202c33]">
+        <div className="border-b border-slate-300 bg-slate-100 px-4 py-2 dark:border-[#2a3942] dark:bg-[#202c33]">
           <div className="flex items-center gap-2">
             <input
               value={messageSearchQuery}
               onChange={(event) => setMessageSearchQuery(event.target.value)}
               placeholder="Search in chat"
-              className="h-9 flex-1 rounded-full border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#111b21] dark:text-slate-100"
+              className="h-9 flex-1 rounded-full border border-slate-400 bg-slate-50 px-3 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#111b21] dark:text-slate-100"
             />
             <button
               type="button"
@@ -742,7 +742,7 @@ export function ChatWindow({
             <MessageListSkeleton />
           ) : messages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-8 text-center dark:border-[#3b4a54] dark:bg-[#202c33]">
+              <div className="rounded-2xl border border-dashed border-slate-400 bg-slate-50 px-6 py-8 text-center dark:border-[#3b4a54] dark:bg-[#202c33]">
                 <p className="text-sm font-medium text-slate-800 dark:text-slate-100">No messages yet</p>
                 <p className="mt-1 text-xs text-slate-500 dark:text-[#8696a0]">
                   Send the first message to start this conversation.
@@ -796,7 +796,7 @@ export function ChatWindow({
 
         <div className="min-h-6 px-4 text-xs text-slate-500 dark:text-[#8696a0]">
           {typingLabel ? (
-            <div className="inline-flex items-center mb-1 gap-1.5 rounded-full bg-white px-2.5 py-1 dark:bg-[#202c33]">
+            <div className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 dark:bg-[#202c33]">
               <span>{typingLabel}</span>
             </div>
           ) : null}
@@ -840,7 +840,7 @@ export function ChatWindow({
 
         <form
           onSubmit={handleSend}
-          className="border-t border-slate-200 bg-white px-3 py-2.5 dark:border-[#2a3942] dark:bg-[#202c33]"
+          className="border-t border-slate-300 bg-slate-100 px-3 py-2.5 dark:border-[#2a3942] dark:bg-[#202c33]"
         >
           <div className="flex items-center gap-2">
             <button
@@ -864,7 +864,7 @@ export function ChatWindow({
               }}
             />
 
-            <div className="flex h-11 flex-1 items-center rounded-full border border-slate-300 bg-white pr-1 dark:border-[#3b4a54] dark:bg-[#2a3942]">
+            <div className="flex h-11 flex-1 items-center rounded-full border border-slate-400 bg-slate-50 pr-1 dark:border-[#3b4a54] dark:bg-[#2a3942]">
               <input
                 value={draft}
                 onChange={(event) => handleDraftChange(event.target.value)}
