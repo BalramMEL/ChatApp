@@ -81,8 +81,19 @@ export function ChatSidebar({
     if (!conversations) {
       return conversations;
     }
-    return filterConversationsByTab(conversations, activeTab);
-  }, [conversations, activeTab]);
+
+    const byTab = filterConversationsByTab(conversations, activeTab);
+    const query = searchValue.trim().toLowerCase();
+    if (!query) {
+      return byTab;
+    }
+
+    return byTab.filter((conversation) => {
+      const name = conversation.name.toLowerCase();
+      const lastMessage = (conversation.lastMessageText ?? "").toLowerCase();
+      return name.includes(query) || lastMessage.includes(query);
+    });
+  }, [conversations, activeTab, searchValue]);
 
   const handleToggleMember = (userId: Id<"users">) => {
     setSelectedMemberIds((previous) => {
@@ -250,11 +261,13 @@ export function ChatSidebar({
             ) : filteredConversations.length === 0 ? (
               <SidebarEmpty
                 text={
-                  activeTab === "unread"
-                    ? "No unread conversations."
-                    : activeTab === "groups"
-                      ? "No group conversations yet."
-                      : "No conversations yet."
+                  searchValue.trim()
+                    ? "No matching conversations."
+                    : activeTab === "unread"
+                      ? "No unread conversations."
+                      : activeTab === "groups"
+                        ? "No group conversations yet."
+                        : "No conversations yet."
                 }
               />
             ) : (
