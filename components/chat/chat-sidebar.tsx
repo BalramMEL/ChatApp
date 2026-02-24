@@ -276,10 +276,10 @@ export function ChatSidebar({
                   key={conversation.conversationId}
                   onClick={() => onConversationSelect(conversation.conversationId)}
                   className={cn(
-                    "chat-list-item-enter glass-subtle mx-2 mt-1 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
-                    activeConversationId === conversation.conversationId
-                      ? "bg-slate-300/85 dark:bg-[#2a3942]"
-                      : "hover:-translate-y-[1px] hover:bg-slate-200/85 dark:hover:bg-[#202c33]",
+                    "chat-list-item-enter mx-2 mt-1 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
+                    String(activeConversationId ?? "") === String(conversation.conversationId)
+                      ? "bg-slate-300/95 ring-1 ring-slate-400/70 dark:bg-[#2a3942] dark:ring-[#3b4a54]"
+                      : "glass-subtle hover:-translate-y-[1px] hover:bg-slate-200/85 dark:hover:bg-[#202c33]",
                   )}
                 >
                   <UserAvatar
