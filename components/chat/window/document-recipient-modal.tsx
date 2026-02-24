@@ -38,7 +38,7 @@ export function DocumentRecipientModal({
 }: DocumentRecipientModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-2xl dark:bg-[#202c33]">
+      <div className="chat-modal-enter w-full max-w-lg rounded-2xl bg-white p-4 shadow-2xl dark:bg-[#202c33]">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
             Select chats

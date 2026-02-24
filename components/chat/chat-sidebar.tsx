@@ -132,8 +132,8 @@ export function ChatSidebar({
 
   return (
     <>
-      <div className="flex h-full bg-slate-100 dark:bg-[#111b21]">
-        <div className="hidden w-[72px] flex-col items-center justify-between border-r border-slate-300 bg-slate-200 py-3 dark:border-[#2a3942] dark:bg-[#202c33] md:flex">
+      <div className="glass-panel flex h-full bg-slate-100 dark:bg-[#111b21]">
+        <div className="glass-panel hidden w-[72px] flex-col items-center justify-between border-r border-slate-300/70 py-3 dark:border-[#2a3942] md:flex">
           <div className="flex w-full flex-col items-center gap-2">
             <button
               type="button"
@@ -193,10 +193,10 @@ export function ChatSidebar({
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="border-b border-slate-300 px-4 py-3 dark:border-[#2a3942]">
+          <div className="glass-panel border-b border-slate-300/70 px-4 py-3 dark:border-[#2a3942]">
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl dark:text-slate-100">
-                Chats
+                Messages
               </h1>
               <div className="flex items-center gap-2">
                 <button
@@ -276,10 +276,10 @@ export function ChatSidebar({
                   key={conversation.conversationId}
                   onClick={() => onConversationSelect(conversation.conversationId)}
                   className={cn(
-                    "mx-2 mt-1 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-left transition",
+                    "chat-list-item-enter glass-subtle mx-2 mt-1 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
                     activeConversationId === conversation.conversationId
-                      ? "bg-slate-300 dark:bg-[#2a3942]"
-                      : "hover:bg-slate-200 dark:hover:bg-[#202c33]",
+                      ? "bg-slate-300/85 dark:bg-[#2a3942]"
+                      : "hover:-translate-y-[1px] hover:bg-slate-200/85 dark:hover:bg-[#202c33]",
                   )}
                 >
                   <UserAvatar
@@ -343,7 +343,7 @@ export function ChatSidebar({
 
       {isGroupModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-2xl dark:bg-[#202c33]">
+          <div className="chat-modal-enter w-full max-w-md rounded-2xl bg-white p-4 shadow-2xl dark:bg-[#202c33]">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                 Create Group Chat
@@ -479,7 +479,7 @@ function UserSelectModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-2xl dark:bg-[#202c33]">
+      <div className="chat-modal-enter w-full max-w-md rounded-2xl bg-white p-4 shadow-2xl dark:bg-[#202c33]">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
           <button

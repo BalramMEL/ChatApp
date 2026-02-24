@@ -97,6 +97,9 @@ export function ChatWindow({
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<Id<"messages"> | null>(null);
   const [openMenuMessageId, setOpenMenuMessageId] = useState<Id<"messages"> | null>(null);
+  const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<
+    Id<"messages"> | null
+  >(null);
   const [editingMessageId, setEditingMessageId] = useState<Id<"messages"> | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -331,6 +334,7 @@ export function ChatWindow({
     setIsSearchOpen(false);
     setMessageSearchQuery("");
     setOpenMenuMessageId(null);
+    setOpenReactionPickerMessageId(null);
     setEditingMessageId(null);
     setEditDraft("");
     previousMessageIdRef.current = null;
@@ -370,23 +374,27 @@ export function ChatWindow({
   }, [conversationId, messages, markConversationRead]);
 
   useEffect(() => {
-    if (!openMenuMessageId) {
+    if (!openMenuMessageId && !openReactionPickerMessageId) {
       return;
     }
 
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.closest("[data-message-menu-root='true']")) {
+      if (
+        target?.closest("[data-message-menu-root='true']") ||
+        target?.closest("[data-reaction-picker-root='true']")
+      ) {
         return;
       }
       setOpenMenuMessageId(null);
+      setOpenReactionPickerMessageId(null);
     };
 
     document.addEventListener("mousedown", onPointerDown);
     return () => {
       document.removeEventListener("mousedown", onPointerDown);
     };
-  }, [openMenuMessageId]);
+  }, [openMenuMessageId, openReactionPickerMessageId]);
 
   useEffect(() => {
     return () => {
@@ -509,6 +517,7 @@ export function ChatWindow({
 
   const handleToggleReaction = async (messageId: Id<"messages">, emoji: ReactionKey) => {
     const key = `${messageId}:${emoji}`;
+    setOpenReactionPickerMessageId(null);
     setPendingReactionKey(key);
     setActionError(null);
 
@@ -566,7 +575,7 @@ export function ChatWindow({
   if (!conversationId) {
     return (
       <>
-        <div className="flex h-full items-center justify-center bg-slate-100 dark:bg-[#0b141a]">
+        <div className="glass-panel flex h-full items-center justify-center bg-slate-100 dark:bg-[#0b141a]">
           <div className="flex flex-col items-center gap-4">
             <div className="grid grid-cols-2 gap-6">
               <QuickAction
@@ -655,7 +664,7 @@ export function ChatWindow({
 
   return (
     <div className="flex h-full flex-col bg-slate-100 dark:bg-[#0b141a]">
-      <header className="border-b border-slate-300 bg-slate-100 px-4 py-3 dark:border-[#2a3942] dark:bg-[#202c33]">
+      <header className="glass-panel border-b border-slate-300/70 px-4 py-3 dark:border-[#2a3942]">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -704,7 +713,7 @@ export function ChatWindow({
       </header>
 
       {isSearchOpen ? (
-        <div className="border-b border-slate-300 bg-slate-100 px-4 py-2 dark:border-[#2a3942] dark:bg-[#202c33]">
+        <div className="glass-panel border-b border-slate-300/70 px-4 py-2 dark:border-[#2a3942]">
           <div className="flex items-center gap-2">
             <input
               value={messageSearchQuery}
@@ -742,7 +751,7 @@ export function ChatWindow({
             <MessageListSkeleton />
           ) : messages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
-              <div className="rounded-2xl border border-dashed border-slate-400 bg-slate-50 px-6 py-8 text-center dark:border-[#3b4a54] dark:bg-[#202c33]">
+              <div className="glass-panel rounded-2xl border border-dashed border-slate-400 px-6 py-8 text-center dark:border-[#3b4a54]">
                 <p className="text-sm font-medium text-slate-800 dark:text-slate-100">No messages yet</p>
                 <p className="mt-1 text-xs text-slate-500 dark:text-[#8696a0]">
                   Send the first message to start this conversation.
@@ -759,16 +768,24 @@ export function ChatWindow({
                   message={item.message}
                   isDeleting={pendingDeleteMessageId === item.message._id}
                   isMenuOpen={openMenuMessageId === item.message._id}
+                  isReactionPickerOpen={openReactionPickerMessageId === item.message._id}
                   isEditing={editingMessageId === item.message._id}
                   isSavingEdit={isSavingEdit}
                   editDraft={editDraft}
                   searchQuery={trimmedSearchQuery}
                   pendingReactionKey={pendingReactionKey}
-                  onToggleMenu={() =>
+                  onToggleMenu={() => {
+                    setOpenReactionPickerMessageId(null);
                     setOpenMenuMessageId((previous) =>
                       previous === item.message._id ? null : item.message._id,
-                    )
-                  }
+                    );
+                  }}
+                  onToggleReactionPicker={() => {
+                    setOpenMenuMessageId(null);
+                    setOpenReactionPickerMessageId((previous) =>
+                      previous === item.message._id ? null : item.message._id,
+                    );
+                  }}
                   onStartEdit={() => handleStartEdit(item.message)}
                   onEditDraftChange={setEditDraft}
                   onSaveEdit={() => void handleSaveEdit()}
@@ -787,7 +804,7 @@ export function ChatWindow({
               scrollToBottom("smooth");
               setShowNewMessagesButton(false);
             }}
-            className="absolute right-4 bottom-20 inline-flex cursor-pointer items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg dark:bg-[#25d366] dark:text-[#111b21]"
+            className="chat-new-messages-pulse absolute right-4 bottom-20 inline-flex cursor-pointer items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg dark:bg-[#25d366] dark:text-[#111b21]"
           >
             <ArrowDown className="h-3.5 w-3.5" />
             New messages
@@ -796,8 +813,13 @@ export function ChatWindow({
 
         <div className="min-h-6 px-4 text-xs text-slate-500 dark:text-[#8696a0]">
           {typingLabel ? (
-            <div className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 dark:bg-[#202c33]">
+            <div className="glass-subtle mb-1 inline-flex items-center gap-2 rounded-full px-2.5 py-1">
               <span>{typingLabel}</span>
+              <div className="chat-typing-dots" aria-hidden="true">
+                <span className="chat-typing-dot" />
+                <span className="chat-typing-dot" />
+                <span className="chat-typing-dot" />
+              </div>
             </div>
           ) : null}
         </div>
@@ -840,7 +862,7 @@ export function ChatWindow({
 
         <form
           onSubmit={handleSend}
-          className="border-t border-slate-300 bg-slate-100 px-3 py-2.5 dark:border-[#2a3942] dark:bg-[#202c33]"
+          className="glass-panel border-t border-slate-300/70 px-3 py-2.5 dark:border-[#2a3942]"
         >
           <div className="flex items-center gap-2">
             <button
