@@ -28,6 +28,14 @@ export type ReactionSummary = {
   reactedByMe: boolean;
 };
 
+export type ReactionDetail = {
+  emoji: ReactionKey;
+  userId: Id<"users">;
+  userName: string;
+  userImageUrl: string | null;
+  isMe: boolean;
+};
+
 export type MessageDeliveryStatus = "sent" | "delivered" | "read";
 
 export type ConversationMessage = {
@@ -48,4 +56,5 @@ export type ConversationMessage = {
   isMine: boolean;
   deliveryStatus: MessageDeliveryStatus | null;
   reactions: ReactionSummary[];
+  reactionDetails: ReactionDetail[];
 };

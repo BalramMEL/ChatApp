@@ -12,6 +12,7 @@ import {
   Paperclip,
   Search,
   SendHorizontal,
+  Sparkles,
   UserPlus,
   Video,
   X,
@@ -20,6 +21,7 @@ import { useMutation, useQuery } from "convex/react";
 
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
+import { cn } from "@/lib/utils";
 
 import { ContactPickerModal } from "./window/contact-picker-modal";
 import { DOCUMENT_ACCEPT, MAX_DOCUMENT_SIZE_BYTES, MAX_IMAGE_SIZE_BYTES } from "./window/constants";
@@ -50,6 +52,11 @@ type ChatWindowProps = {
 type FailedSend =
   | { type: "text"; body: string; error: string }
   | { type: "image"; file: File; caption: string; error: string };
+
+type AiTurn = {
+  role: "user" | "assistant";
+  text: string;
+};
 
 export function ChatWindow({
   conversationId,
@@ -104,6 +111,11 @@ export function ChatWindow({
   const [editDraft, setEditDraft] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [pendingReactionKey, setPendingReactionKey] = useState<string | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiTurns, setAiTurns] = useState<AiTurn[]>([]);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
   const [contactSearchValue, setContactSearchValue] = useState("");
@@ -572,6 +584,45 @@ export function ChatWindow({
     }
   };
 
+  const handleAskAi = async () => {
+    const prompt = aiPrompt.trim();
+    if (!prompt || isAiLoading) {
+      return;
+    }
+
+    setAiPrompt("");
+    setAiError(null);
+    setIsAiLoading(true);
+    setAiTurns((previous) => [...previous, { role: "user", text: prompt }]);
+
+    try {
+      const response = await fetch("/api/ai-assistant", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          conversationName: activeConversation?.name ?? null,
+        }),
+      });
+
+      const payload = (await response.json()) as { reply?: string; error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "AI request failed");
+      }
+
+      setAiTurns((previous) => [
+        ...previous,
+        { role: "assistant", text: payload.reply ?? "No response from AI." },
+      ]);
+    } catch (error) {
+      setAiError(toErrorMessage(error, "AI request failed."));
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   if (!conversationId) {
     return (
       <>
@@ -707,6 +758,12 @@ export function ChatWindow({
               label={isSearchOpen ? "Close search" : "Search messages"}
               active={isSearchOpen}
               onClick={() => setIsSearchOpen((previous) => !previous)}
+            />
+            <IconButton
+              icon={<Sparkles className="h-4 w-4" />}
+              label={isAiModalOpen ? "Close AI assistant" : "Open AI assistant"}
+              active={isAiModalOpen}
+              onClick={() => setIsAiModalOpen((previous) => !previous)}
             />
           </div>
         </div>
@@ -909,6 +966,92 @@ export function ChatWindow({
           </div>
         </form>
       </div>
+
+      {isAiModalOpen ? (
+        <div className="pointer-events-none absolute inset-0 z-40 flex items-end justify-end p-4">
+          <div className="chat-modal-enter pointer-events-auto h-[min(32rem,78vh)] w-full max-w-sm overflow-hidden rounded-2xl border border-slate-300 bg-white/95 shadow-2xl backdrop-blur-sm dark:border-[#3b4a54] dark:bg-[#202c33]/95">
+            <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2 dark:border-[#3b4a54]">
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">AI Assistant</p>
+                <p className="text-[11px] text-slate-500 dark:text-[#8696a0]">Quick help inside chat</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAiModalOpen(false)}
+                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
+                aria-label="Close AI assistant"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex h-[calc(100%-3.1rem)] flex-col">
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
+                {aiTurns.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500 dark:border-[#3b4a54] dark:text-[#8696a0]">
+                    Ask anything. Example: &quot;Summarize this conversation.&quot; or
+                    &nbsp;&quot;Draft a polite reply.&quot;
+                  </p>
+                ) : (
+                  aiTurns.map((turn, index) => (
+                    <div
+                      key={`${turn.role}-${index}`}
+                      className={cn(
+                        "max-w-[92%] rounded-xl px-3 py-2 text-xs leading-relaxed",
+                        turn.role === "assistant"
+                          ? "bg-slate-100 text-slate-800 dark:bg-[#2a3942] dark:text-slate-100"
+                          : "ml-auto bg-emerald-100 text-emerald-900 dark:bg-[#005c4b] dark:text-[#e9edef]",
+                      )}
+                    >
+                      {turn.text}
+                    </div>
+                  ))
+                )}
+                {isAiLoading ? (
+                  <div className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600 dark:bg-[#2a3942] dark:text-[#aebac1]">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Thinking...
+                  </div>
+                ) : null}
+              </div>
+
+              {aiError ? (
+                <div className="mx-3 mb-2 rounded-lg border border-rose-300 bg-rose-50 px-2 py-1.5 text-xs text-rose-800 dark:border-rose-700/60 dark:bg-rose-900/30 dark:text-rose-200">
+                  {aiError}
+                </div>
+              ) : null}
+
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleAskAi();
+                }}
+                className="border-t border-slate-200 p-2.5 dark:border-[#3b4a54]"
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    value={aiPrompt}
+                    onChange={(event) => setAiPrompt(event.target.value)}
+                    placeholder="Ask AI..."
+                    className="h-9 flex-1 rounded-full border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#111b21] dark:text-slate-100"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isAiLoading || !aiPrompt.trim()}
+                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-slate-900 text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#25d366] dark:text-[#111b21]"
+                  >
+                    {isAiLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <SendHorizontal className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

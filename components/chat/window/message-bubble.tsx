@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Check,
   CheckCheck,
@@ -20,6 +21,7 @@ import type {
   MessageDeliveryStatus,
   ReactionKey,
 } from "../types";
+import { UserAvatar } from "../user-avatar";
 import { REACTION_META } from "./constants";
 import { formatFileSize, highlightText } from "./utils";
 
@@ -82,6 +84,49 @@ export function MessageBubble({
   const totalReactionCount = activeReactions.reduce((sum, reaction) => sum + reaction.count, 0);
   const reactionPreview = activeReactions.slice(0, 3);
   const reactedByMe = activeReactions.some((reaction) => reaction.reactedByMe);
+  const [isReactionDetailsOpen, setIsReactionDetailsOpen] = useState(false);
+  const [selectedReactionTab, setSelectedReactionTab] = useState<"all" | ReactionKey>("all");
+
+  const reactionLabelByKey = new Map(
+    REACTION_META.map((reactionMeta) => [reactionMeta.key, reactionMeta.label]),
+  );
+  const reactionTabs = [
+    { key: "all" as const, label: "All", count: totalReactionCount },
+    ...activeReactions.map((reaction) => ({
+      key: reaction.key,
+      label: reaction.label,
+      count: reaction.count,
+    })),
+  ];
+  const effectiveReactionTab =
+    selectedReactionTab === "all" ||
+    activeReactions.some((reaction) => reaction.key === selectedReactionTab)
+      ? selectedReactionTab
+      : "all";
+  const filteredReactionDetails =
+    effectiveReactionTab === "all"
+      ? message.reactionDetails
+      : message.reactionDetails.filter((detail) => detail.emoji === effectiveReactionTab);
+  const isReactionDetailsVisible = isReactionDetailsOpen && activeReactions.length > 0;
+
+  useEffect(() => {
+    if (!isReactionDetailsOpen) {
+      return;
+    }
+
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest(`[data-reaction-details-root='${message._id}']`)) {
+        return;
+      }
+      setIsReactionDetailsOpen(false);
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [isReactionDetailsOpen, message._id]);
 
   return (
     <div
@@ -321,7 +366,7 @@ export function MessageBubble({
 
         {activeReactions.length > 0 ? (
           <div
-            data-reaction-picker-root="true"
+            data-reaction-details-root={message._id}
             className={cn(
               "absolute -bottom-2 z-10",
               message.isMine ? "right-3" : "left-3",
@@ -329,7 +374,7 @@ export function MessageBubble({
           >
             <button
               type="button"
-              onClick={onToggleReactionPicker}
+              onClick={() => setIsReactionDetailsOpen((previous) => !previous)}
               className={cn(
                 "inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[12px] shadow-sm transition",
                 reactedByMe
@@ -346,6 +391,73 @@ export function MessageBubble({
                 <span className="text-[11px] font-semibold">{totalReactionCount}</span>
               ) : null}
             </button>
+
+            {isReactionDetailsVisible ? (
+              <div
+                className={cn(
+                  "chat-reaction-picker-enter absolute bottom-[calc(100%+0.45rem)] z-20 w-72 overflow-hidden rounded-xl border border-slate-300 bg-white/95 shadow-xl backdrop-blur-sm dark:border-[#3b4a54] dark:bg-[#202c33]/95",
+                  message.isMine ? "right-0" : "left-0",
+                )}
+              >
+                <div className="flex items-center gap-1 border-b border-slate-200 px-2 py-1.5 dark:border-[#3b4a54]">
+                  {reactionTabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setSelectedReactionTab(tab.key)}
+                      className={cn(
+                        "inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-xs transition",
+                        effectiveReactionTab === tab.key
+                          ? "bg-emerald-100 font-semibold text-emerald-700 dark:bg-[#103529] dark:text-[#d6fddc]"
+                          : "text-slate-600 hover:bg-slate-100 dark:text-[#aebac1] dark:hover:bg-[#2a3942]",
+                      )}
+                    >
+                      <span>{tab.label}</span>
+                      <span>{tab.count}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="max-h-48 overflow-y-auto py-1">
+                  {filteredReactionDetails.map((detail) => {
+                    const reactionKey = `${message._id}:${detail.emoji}`;
+                    const isPending = pendingReactionKey === reactionKey;
+                    const emojiLabel = reactionLabelByKey.get(detail.emoji) ?? detail.emoji;
+                    return (
+                      <button
+                        key={`${detail.userId}-${detail.emoji}`}
+                        type="button"
+                        disabled={!detail.isMe || isPending}
+                        onClick={() => {
+                          void onToggleReaction(message._id, detail.emoji);
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-3 px-3 py-2 text-left transition",
+                          detail.isMe
+                            ? "cursor-pointer hover:bg-slate-100 dark:hover:bg-[#2a3942]"
+                            : "cursor-default",
+                        )}
+                      >
+                        <UserAvatar
+                          name={detail.userName}
+                          imageUrl={detail.userImageUrl}
+                          className="h-8 w-8"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                            {detail.userName}
+                          </p>
+                          {detail.isMe ? (
+                            <p className="text-xs text-slate-500 dark:text-[#8696a0]">Click to remove</p>
+                          ) : null}
+                        </div>
+                        <span className="text-lg leading-none">{emojiLabel}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

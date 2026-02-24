@@ -148,19 +148,69 @@ function summarizeReactionsForMessage(
 }
 
 async function buildSenderMap(ctx: QueryCtx, messageSenderIds: Id<"users">[]) {
-  const uniqueSenderIds = [...new Set(messageSenderIds)];
-  const senderEntries = await Promise.all(
-    uniqueSenderIds.map(async (senderId) => {
-      const sender = await ctx.db.get(senderId);
-      return [senderId, sender] as const;
+  const uniqueUserIds = [...new Set(messageSenderIds)];
+  const userEntries = await Promise.all(
+    uniqueUserIds.map(async (userId) => {
+      const user = await ctx.db.get(userId);
+      return [userId, user] as const;
     }),
   );
 
   return new Map(
-    senderEntries.filter(
+    userEntries.filter(
       (entry): entry is readonly [Id<"users">, NonNullable<(typeof entry)[1]>] => entry[1] !== null,
     ),
   );
+}
+
+function buildReactionDetailsForMessage(
+  messageId: Id<"messages">,
+  reactions: Doc<"messageReactions">[],
+  currentUserId: Id<"users">,
+  userMap: Map<Id<"users">, Doc<"users">>,
+) {
+  const details = reactions
+    .filter((reaction) => reaction.messageId === messageId)
+    .flatMap((reaction) => {
+      const emoji = normalizeReactionKey(reaction.emoji);
+      if (!emoji) {
+        return [];
+      }
+
+      const reactingUser = userMap.get(reaction.userId);
+      if (!reactingUser) {
+        return [];
+      }
+
+      return [
+        {
+          emoji,
+          userId: reaction.userId,
+          userName: reactingUser.name,
+          userImageUrl: reactingUser.imageUrl ?? null,
+          isMe: reaction.userId === currentUserId,
+          createdAt: reaction.createdAt,
+        },
+      ];
+    });
+
+  details.sort((left, right) => {
+    if (left.isMe !== right.isMe) {
+      return left.isMe ? -1 : 1;
+    }
+    if (left.userName !== right.userName) {
+      return left.userName.localeCompare(right.userName);
+    }
+    return left.createdAt - right.createdAt;
+  });
+
+  return details.map((detail) => ({
+    emoji: detail.emoji,
+    userId: detail.userId,
+    userName: detail.userName,
+    userImageUrl: detail.userImageUrl,
+    isMe: detail.isMe,
+  }));
 }
 
 type DeliveryStatus = "sent" | "delivered" | "read";
@@ -219,18 +269,18 @@ export const listForConversation = query({
       .query("messages")
       .withIndex("by_conversation", (q) => q.eq("conversationId", args.conversationId))
       .collect();
-    const senderMap = await buildSenderMap(
-      ctx,
-      messages.map((message) => message.senderId),
-    );
     const reactions = await ctx.db
       .query("messageReactions")
       .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
       .collect();
+    const userMap = await buildSenderMap(ctx, [
+      ...messages.map((message) => message.senderId),
+      ...reactions.map((reaction) => reaction.userId),
+    ]);
 
     return await Promise.all(
       messages.map(async (message) => {
-        const sender = senderMap.get(message.senderId) ?? null;
+        const sender = userMap.get(message.senderId) ?? null;
         const isDeleted = Boolean(message.deletedAt);
         const imageUrl =
           message.imageStorageId && !isDeleted
@@ -269,6 +319,12 @@ export const listForConversation = query({
           isMine: message.senderId === me._id,
           deliveryStatus,
           reactions: summarizeReactionsForMessage(message._id, reactions, me._id),
+          reactionDetails: buildReactionDetailsForMessage(
+            message._id,
+            reactions,
+            me._id,
+            userMap,
+          ),
         };
       }),
     );
