@@ -100,7 +100,7 @@ export function MessageBubble({
   ];
   const effectiveReactionTab =
     selectedReactionTab === "all" ||
-    activeReactions.some((reaction) => reaction.key === selectedReactionTab)
+      activeReactions.some((reaction) => reaction.key === selectedReactionTab)
       ? selectedReactionTab
       : "all";
   const filteredReactionDetails =
@@ -138,10 +138,10 @@ export function MessageBubble({
       <div className={cn("relative max-w-[min(86%,42rem)]", activeReactions.length > 0 ? "pb-4" : "")}>
         <div
           className={cn(
-            "relative rounded-2xl px-3 py-2 shadow-sm ring-1 ring-black/5 transition-transform duration-150 group-hover:-translate-y-[1px] dark:ring-white/5",
+            "relative rounded-[22px] px-3.5 py-2 text-[15px]",
             message.isMine
-              ? "rounded-tr-sm bg-emerald-100 text-slate-900 dark:bg-[#005c4b] dark:text-[#e9edef]"
-              : "rounded-tl-sm bg-white text-slate-900 shadow-sm dark:bg-[#202c33] dark:text-[#e9edef]",
+              ? "rounded-br-[6px] ig-message-gradient"
+              : "rounded-bl-[6px] bg-secondary text-secondary-foreground",
           )}
         >
           {canReact ? (
@@ -156,10 +156,10 @@ export function MessageBubble({
                 type="button"
                 onClick={onToggleReactionPicker}
                 className={cn(
-                  "inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 shadow-sm transition dark:border-[#3b4a54] dark:bg-[#202c33] dark:text-[#aebac1]",
+                  "inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors",
                   isReactionPickerOpen
                     ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-100 hover:bg-slate-100 dark:hover:bg-[#2a3942]",
+                    : "opacity-0 group-hover:opacity-100 hover:bg-secondary",
                 )}
                 aria-label="Add reaction"
               >
@@ -169,7 +169,7 @@ export function MessageBubble({
               {isReactionPickerOpen ? (
                 <div
                   className={cn(
-                    "chat-reaction-picker-enter absolute top-1/2 z-30 flex -translate-y-1/2 items-center gap-1 rounded-full border border-slate-300 bg-white px-2 py-1 shadow-xl dark:border-[#3b4a54] dark:bg-[#202c33]",
+                    "chat-reaction-picker-enter absolute top-1/2 z-30 flex -translate-y-1/2 items-center gap-1 rounded-full border border-border bg-background px-2 py-1 shadow-xl",
                     message.isMine ? "right-[calc(100%+0.45rem)]" : "left-[calc(100%+0.45rem)]",
                   )}
                 >
@@ -182,7 +182,7 @@ export function MessageBubble({
                         type="button"
                         disabled={isPending}
                         onClick={() => onToggleReaction(message._id, key)}
-                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-xl transition hover:bg-slate-100 disabled:opacity-60 dark:hover:bg-[#2a3942]"
+                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-xl transition hover:bg-secondary disabled:opacity-60"
                         aria-label={`React with ${label}`}
                       >
                         {label}
@@ -191,7 +191,7 @@ export function MessageBubble({
                   })}
                   <button
                     type="button"
-                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-[#aebac1] dark:hover:bg-[#2a3942]"
+                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-secondary"
                     aria-label="More reactions"
                   >
                     <Plus className="h-4 w-4" />
@@ -207,7 +207,7 @@ export function MessageBubble({
                 type="button"
                 onClick={onToggleMenu}
                 className={cn(
-                  "inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-transparent text-slate-600 transition hover:border-slate-300 hover:bg-slate-200 dark:text-[#aebac1] dark:hover:border-[#3b4a54] dark:hover:bg-[#2a3942]",
+                  "inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-transparent text-muted-foreground transition hover:border-border hover:bg-secondary",
                   isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100",
                 )}
                 aria-label="Message options"
@@ -216,12 +216,12 @@ export function MessageBubble({
               </button>
 
               {isMenuOpen ? (
-                <div className="absolute top-7 right-0 w-36 rounded-xl border border-slate-300 bg-white py-1 shadow-lg dark:border-[#3b4a54] dark:bg-[#202c33]">
+                <div className="absolute top-7 right-0 w-36 rounded-xl border border-border bg-background py-1 shadow-lg">
                   {canEdit ? (
                     <button
                       type="button"
                       onClick={onStartEdit}
-                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-[#2a3942]"
+                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-secondary"
                     >
                       <PencilLine className="h-4 w-4" />
                       Edit
@@ -231,7 +231,7 @@ export function MessageBubble({
                     type="button"
                     disabled={isDeleting}
                     onClick={() => onDelete(message._id)}
-                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-rose-700 hover:bg-rose-50 disabled:opacity-60 dark:text-rose-300 dark:hover:bg-rose-900/30"
+                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-destructive/10 disabled:opacity-60"
                   >
                     {isDeleting ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -246,7 +246,7 @@ export function MessageBubble({
           ) : null}
 
           {!message.isMine ? (
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-[#8696a0]">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               {message.senderName}
             </p>
           ) : null}
@@ -263,20 +263,20 @@ export function MessageBubble({
                 value={editDraft}
                 onChange={(event) => onEditDraftChange(event.target.value)}
                 rows={3}
-                className="w-full resize-none rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#111b21] dark:text-slate-100"
+                className="w-full resize-none rounded-lg border border-border bg-secondary px-2.5 py-2 text-sm text-foreground outline-none focus:border-ring transition-colors"
               />
               <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={onCancelEdit}
-                  className="h-8 cursor-pointer rounded-md border border-slate-300 px-2.5 text-xs text-slate-700 dark:border-[#3b4a54] dark:text-slate-200"
+                  className="h-8 cursor-pointer rounded-md border border-border px-2.5 text-xs text-foreground"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingEdit}
-                  className="inline-flex h-8 cursor-pointer items-center rounded-md bg-slate-900 px-2.5 text-xs font-medium text-white disabled:opacity-60 dark:bg-[#25d366] dark:text-[#111b21]"
+                  className="inline-flex h-8 cursor-pointer items-center rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground disabled:opacity-60 transition"
                 >
                   {isSavingEdit ? (
                     <>
@@ -290,7 +290,7 @@ export function MessageBubble({
               </div>
             </form>
           ) : message.isDeleted ? (
-            <p className="text-sm italic text-slate-500 dark:text-[#aebac1]">This message was deleted</p>
+            <p className="text-sm italic text-muted-foreground">This message was deleted</p>
           ) : message.messageType === "image" ? (
             <div className="space-y-2">
               {message.imageUrl ? (
@@ -303,7 +303,7 @@ export function MessageBubble({
                   />
                 </>
               ) : (
-                <div className="flex h-40 w-[260px] items-center justify-center rounded-lg bg-slate-200 text-slate-500 dark:bg-[#2a3942] dark:text-[#8696a0]">
+                <div className="flex h-40 w-[260px] items-center justify-center rounded-lg bg-secondary text-muted-foreground">
                   Image unavailable
                 </div>
               )}
@@ -314,17 +314,17 @@ export function MessageBubble({
               ) : null}
             </div>
           ) : message.messageType === "file" ? (
-            <div className="min-w-[220px] max-w-[360px] rounded-xl border border-slate-300 bg-white/70 p-3 dark:border-[#3b4a54] dark:bg-[#111b21]/40">
+            <div className="min-w-[220px] max-w-[360px] rounded-xl border border-border bg-background/40 p-3">
               <div className="flex items-center gap-2">
-                <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-200 text-slate-600 dark:bg-[#2a3942] dark:text-[#aebac1]">
+                <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
                   <FileText className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                  <p className="truncate text-sm font-medium">
                     {highlightText(message.fileName ?? "Document", searchQuery)}
                   </p>
                   {message.fileSize ? (
-                    <p className="text-[11px] text-slate-500 dark:text-[#8696a0]">
+                    <p className="text-[11px] opacity-75">
                       {formatFileSize(message.fileSize)}
                     </p>
                   ) : null}
@@ -334,7 +334,7 @@ export function MessageBubble({
                     href={message.fileUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-200 dark:hover:bg-[#2a3942]"
+                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-border hover:bg-black/5 dark:hover:bg-white/5"
                     aria-label="Open document"
                   >
                     <Download className="h-4 w-4" />
@@ -352,14 +352,14 @@ export function MessageBubble({
             <p
               className={cn(
                 "text-[11px]",
-                message.isMine ? "text-slate-500 dark:text-[#aebac1]" : "text-slate-500 dark:text-[#8696a0]",
+                message.isMine ? "text-white/70" : "text-muted-foreground",
               )}
               suppressHydrationWarning
             >
               {formatMessageTimestamp(message.createdAt)}
             </p>
             {message.isMine && message.deliveryStatus ? (
-              <MessageDeliveryIcon status={message.deliveryStatus} />
+              <MessageDeliveryIcon status={message.deliveryStatus} isMine={message.isMine} />
             ) : null}
           </div>
         </div>
@@ -378,8 +378,8 @@ export function MessageBubble({
               className={cn(
                 "inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[12px] shadow-sm transition",
                 reactedByMe
-                  ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-[#25d366]/60 dark:bg-[#103529] dark:text-[#d6fddc] dark:hover:bg-[#164b3c]"
-                  : "border-slate-300 bg-white/95 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:bg-[#202c33]/95 dark:text-[#d1d7db] dark:hover:bg-[#2a3942]",
+                  ? "border-primary bg-primary/20 text-foreground hover:bg-primary/30"
+                  : "border-border bg-secondary/95 text-foreground hover:bg-secondary",
               )}
             >
               <div className="flex items-center gap-0.5">
@@ -395,11 +395,11 @@ export function MessageBubble({
             {isReactionDetailsVisible ? (
               <div
                 className={cn(
-                  "chat-reaction-picker-enter absolute bottom-[calc(100%+0.45rem)] z-20 w-72 overflow-hidden rounded-xl border border-slate-300 bg-white/95 shadow-xl backdrop-blur-sm dark:border-[#3b4a54] dark:bg-[#202c33]/95",
+                  "chat-reaction-picker-enter absolute bottom-[calc(100%+0.45rem)] z-20 w-72 overflow-hidden rounded-xl border border-border bg-background shadow-xl",
                   message.isMine ? "right-0" : "left-0",
                 )}
               >
-                <div className="flex items-center gap-1 border-b border-slate-200 px-2 py-1.5 dark:border-[#3b4a54]">
+                <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
                   {reactionTabs.map((tab) => (
                     <button
                       key={tab.key}
@@ -408,8 +408,8 @@ export function MessageBubble({
                       className={cn(
                         "inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-xs transition",
                         effectiveReactionTab === tab.key
-                          ? "bg-emerald-100 font-semibold text-emerald-700 dark:bg-[#103529] dark:text-[#d6fddc]"
-                          : "text-slate-600 hover:bg-slate-100 dark:text-[#aebac1] dark:hover:bg-[#2a3942]",
+                          ? "bg-primary/20 font-semibold text-foreground"
+                          : "text-muted-foreground hover:bg-secondary",
                       )}
                     >
                       <span>{tab.label}</span>
@@ -434,7 +434,7 @@ export function MessageBubble({
                         className={cn(
                           "flex w-full items-center gap-3 px-3 py-2 text-left transition",
                           detail.isMe
-                            ? "cursor-pointer hover:bg-slate-100 dark:hover:bg-[#2a3942]"
+                            ? "cursor-pointer hover:bg-secondary"
                             : "cursor-default",
                         )}
                       >
@@ -444,11 +444,11 @@ export function MessageBubble({
                           className="h-8 w-8"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                          <p className="truncate text-sm font-medium text-foreground">
                             {detail.userName}
                           </p>
                           {detail.isMe ? (
-                            <p className="text-xs text-slate-500 dark:text-[#8696a0]">Click to remove</p>
+                            <p className="text-xs text-muted-foreground">Click to remove</p>
                           ) : null}
                         </div>
                         <span className="text-lg leading-none">{emojiLabel}</span>
@@ -465,19 +465,22 @@ export function MessageBubble({
   );
 }
 
-function MessageDeliveryIcon({ status }: { status: MessageDeliveryStatus }) {
+function MessageDeliveryIcon({ status, isMine }: { status: MessageDeliveryStatus; isMine?: boolean }) {
+  const textColorClass = isMine ? "text-white/80" : "text-muted-foreground";
+  const readColorClass = isMine ? "text-white" : "text-sky-500";
+
   if (status === "read") {
-    return <CheckCheck className="h-3.5 w-3.5 text-sky-500 dark:text-sky-300" aria-label="Read" />;
+    return <CheckCheck className={cn("h-3.5 w-3.5", readColorClass)} aria-label="Read" />;
   }
 
   if (status === "delivered") {
     return (
       <CheckCheck
-        className="h-3.5 w-3.5 text-slate-500 dark:text-[#aebac1]"
+        className={cn("h-3.5 w-3.5", textColorClass)}
         aria-label="Delivered"
       />
     );
   }
 
-  return <Check className="h-3.5 w-3.5 text-slate-500 dark:text-[#aebac1]" aria-label="Sent" />;
+  return <Check className={cn("h-3.5 w-3.5", textColorClass)} aria-label="Sent" />;
 }

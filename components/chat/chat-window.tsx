@@ -714,8 +714,8 @@ export function ChatWindow({
   const searchMatchCount = countSearchMatches(messages, trimmedSearchQuery);
 
   return (
-    <div className="flex h-full flex-col bg-slate-100 dark:bg-[#0b141a]">
-      <header className="glass-panel border-b border-slate-300/70 px-4 py-3 dark:border-[#2a3942]">
+    <div className="flex h-full flex-col bg-background">
+      <header className="border-b border-border px-4 py-3 bg-background">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -734,15 +734,15 @@ export function ChatWindow({
                   isOnline={activeConversation.type === "direct" ? activeConversation.isOnline : false}
                 />
                 <div className="min-w-0">
-                  <h2 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  <h2 className="truncate text-sm font-semibold text-foreground">
                     {activeConversation.name}
                   </h2>
                   {activeConversation.type === "group" ? (
-                    <p className="text-xs text-slate-500 dark:text-[#8696a0]">
+                    <p className="text-xs text-muted-foreground">
                       {activeConversation.memberCount} members
                     </p>
                   ) : (
-                    <p className="text-xs text-slate-500 dark:text-[#8696a0]">
+                    <p className="text-xs text-muted-foreground">
                       {activeConversation.isOnline ? "Online" : "Offline"}
                     </p>
                   )}
@@ -770,13 +770,13 @@ export function ChatWindow({
       </header>
 
       {isSearchOpen ? (
-        <div className="glass-panel border-b border-slate-300/70 px-4 py-2 dark:border-[#2a3942]">
+        <div className="border-b border-border px-4 py-2 bg-background">
           <div className="flex items-center gap-2">
             <input
               value={messageSearchQuery}
               onChange={(event) => setMessageSearchQuery(event.target.value)}
               placeholder="Search in chat"
-              className="h-9 flex-1 rounded-full border border-slate-400 bg-slate-50 px-3 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#111b21] dark:text-slate-100"
+              className="h-9 flex-1 rounded-full border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:border-ring transition-colors"
             />
             <button
               type="button"
@@ -808,9 +808,9 @@ export function ChatWindow({
             <MessageListSkeleton />
           ) : messages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
-              <div className="glass-panel rounded-2xl border border-dashed border-slate-400 px-6 py-8 text-center dark:border-[#3b4a54]">
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">No messages yet</p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-[#8696a0]">
+              <div className="rounded-2xl border border-dashed border-border px-6 py-8 text-center bg-background">
+                <p className="text-sm font-medium text-foreground">No messages yet</p>
+                <p className="mt-1 text-xs text-muted-foreground">
                   Send the first message to start this conversation.
                 </p>
               </div>
@@ -868,9 +868,9 @@ export function ChatWindow({
           </button>
         ) : null}
 
-        <div className="min-h-6 px-4 text-xs text-slate-500 dark:text-[#8696a0]">
+        <div className="min-h-6 px-4 text-xs text-muted-foreground">
           {typingLabel ? (
-            <div className="glass-subtle mb-1 inline-flex items-center gap-2 rounded-full px-2.5 py-1">
+            <div className="mb-1 inline-flex items-center gap-2 rounded-full px-2.5 py-1 bg-secondary text-secondary-foreground">
               <span>{typingLabel}</span>
               <div className="chat-typing-dots" aria-hidden="true">
                 <span className="chat-typing-dot" />
@@ -919,14 +919,14 @@ export function ChatWindow({
 
         <form
           onSubmit={handleSend}
-          className="glass-panel border-t border-slate-300/70 px-3 py-2.5 dark:border-[#2a3942]"
+          className="border-t border-border px-3 py-2.5 bg-background"
         >
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploadingImage}
-              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-60 dark:border-[#3b4a54] dark:text-slate-200 dark:hover:bg-[#2a3942]"
+              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-foreground hover:bg-secondary disabled:opacity-60 transition-colors"
               aria-label="Send image"
             >
               {isUploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
@@ -943,42 +943,45 @@ export function ChatWindow({
               }}
             />
 
-            <div className="flex h-11 flex-1 items-center rounded-full border border-slate-400 bg-slate-50 pr-1 dark:border-[#3b4a54] dark:bg-[#2a3942]">
+            <div className="flex h-11 flex-1 items-center rounded-full border border-border bg-secondary pr-1">
               <input
                 value={draft}
                 onChange={(event) => handleDraftChange(event.target.value)}
-                placeholder="Type a message"
-                className="h-full flex-1 rounded-full bg-transparent px-4 text-sm text-slate-900 outline-none dark:text-slate-100"
+                placeholder="Message..."
+                className="h-full flex-1 rounded-full bg-transparent px-4 text-sm text-foreground outline-none"
               />
               {draft.trim() ? null : (
-                <span className="mr-3 text-slate-400 dark:text-[#8696a0]">
+                <span className="mr-3 text-muted-foreground">
                   <Mic className="h-4 w-4" />
                 </span>
               )}
             </div>
-            <button
-              type="submit"
-              disabled={isSending || !draft.trim()}
-              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-slate-900 text-white transition disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#25d366] dark:text-[#111b21]"
-            >
-              {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
-            </button>
+
+            {draft.trim() ? (
+              <button
+                type="submit"
+                disabled={isSending || !draft.trim()}
+                className="inline-flex h-11 px-4 font-semibold cursor-pointer items-center justify-center rounded-full text-primary hover:text-foreground transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+              </button>
+            ) : null}
           </div>
         </form>
       </div>
 
       {isAiModalOpen ? (
         <div className="pointer-events-none absolute inset-0 z-40 flex items-end justify-end p-4">
-          <div className="chat-modal-enter pointer-events-auto h-[min(32rem,78vh)] w-full max-w-sm overflow-hidden rounded-2xl border border-slate-300 bg-white/95 shadow-2xl backdrop-blur-sm dark:border-[#3b4a54] dark:bg-[#202c33]/95">
-            <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2 dark:border-[#3b4a54]">
+          <div className="chat-modal-enter pointer-events-auto h-[min(32rem,78vh)] w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-background shadow-2xl backdrop-blur-sm">
+            <div className="flex items-center justify-between border-b border-border px-3 py-2">
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">AI Assistant</p>
-                <p className="text-[11px] text-slate-500 dark:text-[#8696a0]">Quick help inside chat</p>
+                <p className="text-sm font-semibold text-foreground">AI Assistant</p>
+                <p className="text-[11px] text-muted-foreground">Quick help inside chat</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsAiModalOpen(false)}
-                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
+                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-transparent text-muted-foreground hover:bg-secondary transition-colors"
                 aria-label="Close AI assistant"
               >
                 <X className="h-4 w-4" />
@@ -988,7 +991,7 @@ export function ChatWindow({
             <div className="flex h-[calc(100%-3.1rem)] flex-col">
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
                 {aiTurns.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500 dark:border-[#3b4a54] dark:text-[#8696a0]">
+                  <p className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
                     Ask anything. Example: &quot;Summarize this conversation.&quot; or
                     &nbsp;&quot;Draft a polite reply.&quot;
                   </p>
@@ -999,8 +1002,8 @@ export function ChatWindow({
                       className={cn(
                         "max-w-[92%] rounded-xl px-3 py-2 text-xs leading-relaxed",
                         turn.role === "assistant"
-                          ? "bg-slate-100 text-slate-800 dark:bg-[#2a3942] dark:text-slate-100"
-                          : "ml-auto bg-emerald-100 text-emerald-900 dark:bg-[#005c4b] dark:text-[#e9edef]",
+                          ? "bg-secondary text-secondary-foreground"
+                          : "ml-auto ig-message-gradient shadow-sm",
                       )}
                     >
                       {turn.text}
@@ -1008,7 +1011,7 @@ export function ChatWindow({
                   ))
                 )}
                 {isAiLoading ? (
-                  <div className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600 dark:bg-[#2a3942] dark:text-[#aebac1]">
+                  <div className="inline-flex items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Thinking...
                   </div>
@@ -1016,7 +1019,7 @@ export function ChatWindow({
               </div>
 
               {aiError ? (
-                <div className="mx-3 mb-2 rounded-lg border border-rose-300 bg-rose-50 px-2 py-1.5 text-xs text-rose-800 dark:border-rose-700/60 dark:bg-rose-900/30 dark:text-rose-200">
+                <div className="mx-3 mb-2 rounded-lg bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
                   {aiError}
                 </div>
               ) : null}
@@ -1026,19 +1029,19 @@ export function ChatWindow({
                   event.preventDefault();
                   void handleAskAi();
                 }}
-                className="border-t border-slate-200 p-2.5 dark:border-[#3b4a54]"
+                className="border-t border-border p-2.5 bg-background"
               >
                 <div className="flex items-center gap-2">
                   <input
                     value={aiPrompt}
                     onChange={(event) => setAiPrompt(event.target.value)}
                     placeholder="Ask AI..."
-                    className="h-9 flex-1 rounded-full border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#111b21] dark:text-slate-100"
+                    className="h-9 flex-1 rounded-full border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:border-ring transition-colors"
                   />
                   <button
                     type="submit"
                     disabled={isAiLoading || !aiPrompt.trim()}
-                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-slate-900 text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#25d366] dark:text-[#111b21]"
+                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50 transition"
                   >
                     {isAiLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

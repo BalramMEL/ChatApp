@@ -132,19 +132,19 @@ export function ChatSidebar({
 
   return (
     <>
-      <div className="glass-panel flex h-full bg-slate-100 dark:bg-[#111b21]">
-        <div className="glass-panel hidden w-[72px] flex-col items-center justify-between border-r border-slate-300/70 py-3 dark:border-[#2a3942] md:flex">
+      <div className="flex h-full bg-background">
+        <div className="hidden w-[72px] flex-col items-center justify-between border-r border-border py-3 bg-background md:flex">
           <div className="flex w-full flex-col items-center gap-2">
             <button
               type="button"
-              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-slate-200 text-slate-700 dark:bg-[#2a3942] dark:text-[#d1d7db]"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-secondary text-secondary-foreground"
               aria-label="Chats"
             >
               <MessageCircle className="h-5 w-5" />
             </button>
             <button
               type="button"
-              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-[#2a3942]"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-secondary-foreground transition-colors"
               aria-label="Communities"
             >
               <UsersRound className="h-5 w-5" />
@@ -155,7 +155,7 @@ export function ChatSidebar({
           <div className="flex flex-col items-center gap-3">
             <button
               type="button"
-              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-[#2a3942]"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-secondary-foreground transition-colors"
               aria-label="Settings"
             >
               <Settings className="h-5 w-5" />
@@ -192,17 +192,17 @@ export function ChatSidebar({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="glass-panel border-b border-slate-300/70 px-4 py-3 dark:border-[#2a3942]">
+        <div className="flex min-w-0 flex-1 flex-col bg-background">
+          <div className="border-b border-border px-4 py-3 bg-background">
             <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl dark:text-slate-100">
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
                 Messages
               </h1>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setIsNewChatModalOpen(true)}
-                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
                   aria-label="New chat"
                 >
                   <Plus className="h-4 w-4" />
@@ -210,29 +210,29 @@ export function ChatSidebar({
                 <button
                   type="button"
                   onClick={() => setIsGroupModalOpen(true)}
-                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
                   aria-label="New group"
                 >
                   <UsersRound className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
-                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#3b4a54] dark:text-slate-300 dark:hover:bg-[#2a3942]"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
                   aria-label="Settings"
                 >
-                <UserButton afterSignOutUrl="/sign-in" />
-                  
+                  <UserButton afterSignOutUrl="/sign-in" />
+
                 </button>
               </div>
             </div>
 
             <div className="relative mt-3">
-              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={searchValue}
                 onChange={(event) => onSearchChange(event.target.value)}
                 placeholder="Search or start a new chat"
-                className="h-11 w-full rounded-full border border-slate-400 bg-slate-50 pl-9 pr-4 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-[#3b4a54] dark:bg-[#2a3942] dark:text-slate-100 dark:focus:border-[#8696a0]"
+                className="h-11 w-full rounded-full border border-border bg-secondary pl-9 pr-4 text-sm text-foreground outline-none focus:border-ring transition-colors"
               />
             </div>
 
@@ -278,8 +278,8 @@ export function ChatSidebar({
                   className={cn(
                     "chat-list-item-enter mx-2 mt-1 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
                     String(activeConversationId ?? "") === String(conversation.conversationId)
-                      ? "bg-slate-300/95 ring-1 ring-slate-400/70 dark:bg-[#2a3942] dark:ring-[#3b4a54]"
-                      : "glass-subtle hover:-translate-y-[1px] hover:bg-slate-200/85 dark:hover:bg-[#202c33]",
+                      ? "bg-secondary"
+                      : "hover:bg-secondary/50",
                   )}
                 >
                   <UserAvatar
@@ -290,7 +290,7 @@ export function ChatSidebar({
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-[1.05rem] font-medium text-slate-900 dark:text-slate-100">
+                      <p className="truncate text-[1.05rem] font-medium text-foreground">
                         {conversation.name}
                       </p>
                       {conversation.lastMessageAt ? (
