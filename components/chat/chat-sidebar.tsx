@@ -132,9 +132,9 @@ export function ChatSidebar({
 
   return (
     <>
-      <div className="flex h-full bg-background">
-        <div className="hidden w-[72px] flex-col items-center justify-between border-r border-border py-3 bg-background md:flex">
-          <div className="flex w-full flex-col items-center gap-2">
+      <div className="flex h-full bg-transparent">
+        <div className="hidden w-[72px] flex-col items-center justify-between py-4 bg-transparent md:flex">
+          <div className="flex w-full flex-col items-center gap-3">
             <button
               type="button"
               className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-secondary text-secondary-foreground"
@@ -192,47 +192,42 @@ export function ChatSidebar({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col bg-background">
-          <div className="border-b border-border px-4 py-3 bg-background">
+        <div className="flex min-w-0 flex-1 flex-col bg-transparent md:border-l border-border/50 shadow-[-10px_0_30px_rgba(0,0,0,0.02)] z-10">
+          <div className="px-5 py-5 pb-4 bg-transparent">
             <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-                Messages
+              <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-3xl">
+                Chats
               </h1>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setIsNewChatModalOpen(true)}
-                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
+                  className="group inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
                   aria-label="New chat"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-5 w-5 transition-transform duration-200 group-hover:scale-110 group-active:scale-95" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsGroupModalOpen(true)}
-                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
+                  className="group inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
                   aria-label="New group"
                 >
-                  <UsersRound className="h-4 w-4" />
+                  <UsersRound className="h-4 w-4 transition-transform duration-200 group-hover:scale-110 group-active:scale-95" />
                 </button>
-                <button
-                  type="button"
-                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
-                  aria-label="Settings"
-                >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-105 active:scale-95 hover:ring-2 hover:ring-primary/20">
                   <UserButton afterSignOutUrl="/sign-in" />
-
-                </button>
+                </div>
               </div>
             </div>
 
-            <div className="relative mt-3">
+            <div className="relative mt-5">
               <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={searchValue}
                 onChange={(event) => onSearchChange(event.target.value)}
-                placeholder="Search or start a new chat"
-                className="h-11 w-full rounded-full border border-border bg-secondary pl-9 pr-4 text-sm text-foreground outline-none focus:border-ring transition-colors"
+                placeholder="Search messages..."
+                className="h-10 w-full rounded-xl border border-border bg-secondary px-9 text-sm font-medium text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
               />
             </div>
 
@@ -262,24 +257,24 @@ export function ChatSidebar({
               <SidebarEmpty
                 text={
                   searchValue.trim()
-                    ? "No matching conversations."
+                    ? "No chats found matching your search."
                     : activeTab === "unread"
-                      ? "No unread conversations."
+                      ? "You're all caught up! No unread chats."
                       : activeTab === "groups"
-                        ? "No group conversations yet."
-                        : "No conversations yet."
+                        ? "You aren't in any groups yet."
+                        : "No chats yet. Start a conversation!"
                 }
               />
             ) : (
-              filteredConversations.map((conversation) => (
+              filteredConversations.map((conversation, index) => (
                 <button
                   key={conversation.conversationId}
                   onClick={() => onConversationSelect(conversation.conversationId)}
                   className={cn(
-                    "chat-list-item-enter mx-2 mt-1 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
+                    "mx-2 my-0.5 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors duration-150 group",
                     String(activeConversationId ?? "") === String(conversation.conversationId)
-                      ? "bg-secondary"
-                      : "hover:bg-secondary/50",
+                      ? "bg-secondary font-semibold"
+                      : "hover:bg-secondary/60",
                   )}
                 >
                   <UserAvatar
@@ -296,10 +291,10 @@ export function ChatSidebar({
                       {conversation.lastMessageAt ? (
                         <span
                           className={cn(
-                            "shrink-0 text-xs",
-                            conversation.unreadCount > 0
-                              ? "text-emerald-600 dark:text-[#25d366]"
-                              : "text-slate-500 dark:text-[#8696a0]",
+                            "shrink-0 text-xs font-medium tracking-tight",
+                            String(activeConversationId ?? "") === String(conversation.conversationId) || conversation.unreadCount > 0
+                              ? "text-primary"
+                              : "text-muted-foreground",
                           )}
                           suppressHydrationWarning
                         >
@@ -308,14 +303,14 @@ export function ChatSidebar({
                       ) : null}
                     </div>
                     <div className="mt-0.5 flex items-center justify-between gap-2">
-                      <p className="truncate text-sm text-slate-600 dark:text-[#8696a0]">
+                      <p className="truncate text-[13px] font-medium text-muted-foreground group-hover:text-foreground/80 transition-colors">
                         {conversation.lastMessageText ??
                           (conversation.type === "group"
                             ? `${conversation.memberCount} members`
-                            : "No messages yet")}
+                            : "No messages yet.")}
                       </p>
                       {conversation.unreadCount > 0 ? (
-                        <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[11px] font-semibold text-white dark:bg-[#25d366] dark:text-[#111b21]">
+                        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground shadow-sm">
                           {conversation.unreadCount}
                         </span>
                       ) : null}

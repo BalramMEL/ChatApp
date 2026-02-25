@@ -194,67 +194,65 @@ export function ChatApp() {
   }
 
   return (
-    <main className="h-screen w-screen bg-background text-foreground">
-      <div className="h-full w-full">
-        <div className="h-full overflow-hidden bg-background">
-          {showConnectionWarning ? (
-            <div className="flex items-center gap-2 border-b border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-200">
-              <WifiOff className="h-4 w-4" />
-              <span>Connection lost. Reconnecting...</span>
-            </div>
-          ) : null}
-
-          {appError ? (
-            <div className="flex items-center justify-between gap-3 border-b border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-900 dark:border-rose-700/60 dark:bg-rose-900/30 dark:text-rose-200">
-              <div className="flex min-w-0 items-center gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span className="truncate">{appError}</span>
-              </div>
-              <button
-                onClick={() => setAppError(null)}
-                className="inline-flex h-6 w-6 items-center justify-center rounded border border-rose-300 dark:border-rose-700"
-                aria-label="Dismiss error"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ) : null}
-
-          <div className="flex h-full">
-            <aside
-              className={cn(
-                "h-full w-full md:w-[470px] md:border-r border-border bg-background",
-                mobileChatOpen ? "hidden md:block" : "block",
-              )}
-            >
-              <ChatSidebar
-                currentUserName={currentUserName}
-                currentUserImage={currentUserImage}
-                searchValue={searchValue}
-                onSearchChange={setSearchValue}
-                users={users}
-                groupUsers={allUsers ?? users}
-                conversations={conversations}
-                activeConversationId={activeConversationId}
-                onConversationSelect={setActiveConversationId}
-                onStartConversation={handleStartConversation}
-                onCreateGroup={handleCreateGroup}
-                onProfileImageUpload={handleProfileImageUpload}
-                isUploadingProfile={uploadingProfile}
-                isCreatingGroup={creatingGroup}
-                startingConversationUserId={startingConversationUserId}
-              />
-            </aside>
-
-            <section className={cn("h-full flex-1", mobileChatOpen ? "block" : "hidden md:block")}>
-              <ChatWindow
-                conversationId={activeConversationId}
-                conversation={activeConversation}
-                onBack={() => setActiveConversationId(null)}
-                onConversationOpen={setActiveConversationId}
-              />
-            </section>
+    <main className="h-screen w-screen bg-background text-foreground overflow-hidden flex flex-col">
+      <div className="flex-1 overflow-hidden flex flex-col relative">
+        {showConnectionWarning ? (
+          <div className="flex items-center gap-2 border-b border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-200">
+            <WifiOff className="h-4 w-4" />
+            <span>Connection lost. Reconnecting...</span>
           </div>
+        ) : null}
+
+        {appError ? (
+          <div className="flex items-center justify-between gap-3 border-b border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-900 dark:border-rose-700/60 dark:bg-rose-900/30 dark:text-rose-200">
+            <div className="flex min-w-0 items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span className="truncate">{appError}</span>
+            </div>
+            <button
+              onClick={() => setAppError(null)}
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-rose-300 dark:border-rose-700"
+              aria-label="Dismiss error"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : null}
+
+        <div className="flex h-full w-full relative z-10">
+          <aside
+            className={cn(
+              "h-full w-full md:w-[380px] lg:w-[420px] md:border-r border-border shrink-0 bg-background",
+              mobileChatOpen ? "hidden md:block" : "block",
+            )}
+          >
+            <ChatSidebar
+              currentUserName={currentUserName}
+              currentUserImage={currentUserImage}
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+              users={users}
+              groupUsers={allUsers ?? users}
+              conversations={conversations}
+              activeConversationId={activeConversationId}
+              onConversationSelect={setActiveConversationId}
+              onStartConversation={handleStartConversation}
+              onCreateGroup={handleCreateGroup}
+              onProfileImageUpload={handleProfileImageUpload}
+              isUploadingProfile={uploadingProfile}
+              isCreatingGroup={creatingGroup}
+              startingConversationUserId={startingConversationUserId}
+            />
+          </aside>
+
+          <section className={cn("h-full flex-1 min-w-0 bg-background relative z-10", mobileChatOpen ? "block" : "hidden md:block")}>
+            <ChatWindow
+              conversationId={activeConversationId}
+              conversation={activeConversation}
+              onBack={() => setActiveConversationId(null)}
+              onConversationOpen={setActiveConversationId}
+            />
+          </section>
         </div>
       </div>
     </main>

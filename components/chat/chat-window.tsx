@@ -14,7 +14,6 @@ import {
   SendHorizontal,
   Sparkles,
   UserPlus,
-  Video,
   X,
 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
@@ -22,12 +21,14 @@ import { useMutation, useQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
+import EmojiPicker from "emoji-picker-react";
 
 import { ContactPickerModal } from "./window/contact-picker-modal";
 import { DOCUMENT_ACCEPT, MAX_DOCUMENT_SIZE_BYTES, MAX_IMAGE_SIZE_BYTES } from "./window/constants";
 import { DateDivider } from "./window/date-divider";
 import { DocumentRecipientModal } from "./window/document-recipient-modal";
 import { IconButton } from "./window/icon-button";
+import { Smile } from "lucide-react";
 import { MessageBubble } from "./window/message-bubble";
 import { MessageListSkeleton } from "./window/message-list-skeleton";
 import { QuickAction } from "./window/quick-action";
@@ -130,6 +131,7 @@ export function ChatWindow({
   const [selectedRecipientUserIds, setSelectedRecipientUserIds] = useState<Id<"users">[]>([]);
   const [isSendingDocument, setIsSendingDocument] = useState(false);
   const [documentActionError, setDocumentActionError] = useState<string | null>(null);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const quickDocumentInputRef = useRef<HTMLInputElement | null>(null);
@@ -714,13 +716,13 @@ export function ChatWindow({
   const searchMatchCount = countSearchMatches(messages, trimmedSearchQuery);
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      <header className="border-b border-border px-4 py-3 bg-background">
+    <div className="flex h-full flex-col bg-background relative">
+      <header className="z-10 px-5 py-4 bg-background/80 backdrop-blur-md border-b border-border/50 shadow-sm transition-all">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={onBack}
-              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 md:hidden dark:border-[#3b4a54] dark:text-slate-200"
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-border text-foreground md:hidden hover:bg-secondary transition-colors"
               aria-label="Back to conversations"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -752,15 +754,14 @@ export function ChatWindow({
           </div>
 
           <div className="flex items-center gap-1">
-            <IconButton icon={<Video className="h-4 w-4" />} label="Video call" />
             <IconButton
-              icon={<Search className="h-4 w-4" />}
+              icon={<Search className="h-4 w-4 transition-transform duration-200 group-hover:scale-110 group-active:scale-95" />}
               label={isSearchOpen ? "Close search" : "Search messages"}
               active={isSearchOpen}
               onClick={() => setIsSearchOpen((previous) => !previous)}
             />
             <IconButton
-              icon={<Sparkles className="h-4 w-4" />}
+              icon={<Sparkles className="h-4 w-4 transition-transform duration-200 group-hover:scale-110 text-sky-500 group-active:scale-95" />}
               label={isAiModalOpen ? "Close AI assistant" : "Open AI assistant"}
               active={isAiModalOpen}
               onClick={() => setIsAiModalOpen((previous) => !previous)}
@@ -770,13 +771,13 @@ export function ChatWindow({
       </header>
 
       {isSearchOpen ? (
-        <div className="border-b border-border px-4 py-2 bg-background">
-          <div className="flex items-center gap-2">
+        <div className="z-10 px-5 py-3 bg-background border-b border-border/50 shadow-sm animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
             <input
               value={messageSearchQuery}
               onChange={(event) => setMessageSearchQuery(event.target.value)}
-              placeholder="Search in chat"
-              className="h-9 flex-1 rounded-full border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:border-ring transition-colors"
+              placeholder="Search in chat..."
+              className="h-10 flex-1 rounded-2xl border border-transparent bg-secondary shadow-inner px-4 text-sm font-medium text-foreground outline-none focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all duration-300"
             />
             <button
               type="button"
@@ -784,7 +785,7 @@ export function ChatWindow({
                 setMessageSearchQuery("");
                 setIsSearchOpen(false);
               }}
-              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-700 dark:border-[#3b4a54] dark:text-slate-300"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border text-foreground hover:bg-secondary transition-colors"
               aria-label="Close message search"
             >
               <X className="h-4 w-4" />
@@ -809,9 +810,9 @@ export function ChatWindow({
           ) : messages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
               <div className="rounded-2xl border border-dashed border-border px-6 py-8 text-center bg-background">
-                <p className="text-sm font-medium text-foreground">No messages yet</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Send the first message to start this conversation.
+                <p className="text-base font-semibold text-foreground">It's quiet in here... 🌬️</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Send a message or a sticker to get the conversation going!
                 </p>
               </div>
             </div>
@@ -916,20 +917,43 @@ export function ChatWindow({
             </button>
           </div>
         ) : null}
+        <div className="mt-auto relative z-10 bg-background border-t border-border px-4 py-3">
+          <form
+            onSubmit={handleSend}
+            className="flex items-center gap-2 relative bg-background"
+          >
+            {isEmojiPickerOpen ? (
+              <div className="absolute bottom-16 left-0 z-50 chat-reaction-picker-enter shadow-2xl rounded-2xl overflow-hidden border border-border/50">
+                <EmojiPicker
+                  onEmojiClick={(emojiData) => {
+                    handleDraftChange(draft + emojiData.emoji);
+                  }}
+                  theme={"auto" as any}
+                  searchDisabled={true}
+                  skinTonesDisabled={true}
+                />
+              </div>
+            ) : null}
 
-        <form
-          onSubmit={handleSend}
-          className="border-t border-border px-3 py-2.5 bg-background"
-        >
-          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
+              className={cn(
+                "group inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors",
+                isEmojiPickerOpen && "bg-secondary text-primary"
+              )}
+              aria-label="Pick emoji"
+            >
+              <Smile className="h-[22px] w-[22px] transition-transform duration-200 group-hover:scale-110 group-active:scale-95" />
+            </button>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploadingImage}
-              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-foreground hover:bg-secondary disabled:opacity-60 transition-colors"
+              className="group inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground hover:bg-secondary disabled:opacity-60 transition-colors"
               aria-label="Send image"
             >
-              {isUploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+              {isUploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-[22px] w-[22px] transition-transform duration-200 group-hover:scale-110 group-active:scale-95 text-sky-500" />}
             </button>
             <input
               ref={fileInputRef}
@@ -942,32 +966,29 @@ export function ChatWindow({
                 event.currentTarget.value = "";
               }}
             />
-
-            <div className="flex h-11 flex-1 items-center rounded-full border border-border bg-secondary pr-1">
+            <div className="flex h-10 flex-1 items-center bg-secondary rounded-xl pr-1 min-w-0 border border-transparent focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
               <input
                 value={draft}
                 onChange={(event) => handleDraftChange(event.target.value)}
                 placeholder="Message..."
-                className="h-full flex-1 rounded-full bg-transparent px-4 text-sm text-foreground outline-none"
+                className="h-full w-full bg-transparent px-4 text-[15px] text-foreground outline-none placeholder:text-muted-foreground/80"
               />
               {draft.trim() ? null : (
-                <span className="mr-3 text-muted-foreground">
-                  <Mic className="h-4 w-4" />
+                <span className="group mr-3 text-muted-foreground/60 cursor-pointer">
+                  <Mic className="h-5 w-5 transition-transform duration-200 group-hover:scale-110 group-active:scale-95" />
                 </span>
               )}
             </div>
 
-            {draft.trim() ? (
-              <button
-                type="submit"
-                disabled={isSending || !draft.trim()}
-                className="inline-flex h-11 px-4 font-semibold cursor-pointer items-center justify-center rounded-full text-primary hover:text-foreground transition disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
-              </button>
-            ) : null}
-          </div>
-        </form>
+            <button
+              type="submit"
+              disabled={isSending || !draft.trim()}
+              className="group inline-flex h-10 px-5 font-semibold cursor-pointer items-center justify-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="transition-transform duration-200 group-hover:scale-105 group-active:scale-95">Send</span>}
+            </button>
+          </form>
+        </div>
       </div>
 
       {isAiModalOpen ? (
@@ -1054,7 +1075,8 @@ export function ChatWindow({
             </div>
           </div>
         </div>
-      ) : null}
-    </div>
+      ) : null
+      }
+    </div >
   );
 }

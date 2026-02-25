@@ -131,17 +131,18 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "group flex chat-bubble-enter",
+        "group flex animate-in slide-in-from-bottom-2 fade-in duration-200",
         message.isMine ? "justify-end" : "justify-start",
+        isReactionDetailsVisible && "relative z-50"
       )}
     >
       <div className={cn("relative max-w-[min(86%,42rem)]", activeReactions.length > 0 ? "pb-4" : "")}>
         <div
           className={cn(
-            "relative rounded-[22px] px-3.5 py-2 text-[15px]",
+            "relative px-4 py-2.5 text-[15px] transition-colors",
             message.isMine
-              ? "rounded-br-[6px] ig-message-gradient"
-              : "rounded-bl-[6px] bg-secondary text-secondary-foreground",
+              ? "rounded-[24px] rounded-br-[4px] ig-message-gradient"
+              : "rounded-[24px] rounded-bl-[4px] bg-secondary text-foreground font-medium",
           )}
         >
           {canReact ? (
@@ -246,7 +247,7 @@ export function MessageBubble({
           ) : null}
 
           {!message.isMine ? (
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
               {message.senderName}
             </p>
           ) : null}
@@ -290,7 +291,12 @@ export function MessageBubble({
               </div>
             </form>
           ) : message.isDeleted ? (
-            <p className="text-sm italic text-muted-foreground">This message was deleted</p>
+            <p className={cn(
+              "text-sm italic",
+              message.isMine ? "text-primary-foreground/80" : "text-muted-foreground"
+            )}>
+              This message was deleted
+            </p>
           ) : message.messageType === "image" ? (
             <div className="space-y-2">
               {message.imageUrl ? (
@@ -368,7 +374,7 @@ export function MessageBubble({
           <div
             data-reaction-details-root={message._id}
             className={cn(
-              "absolute -bottom-2 z-10",
+              "absolute -bottom-2 z-50",
               message.isMine ? "right-3" : "left-3",
             )}
           >
@@ -395,7 +401,7 @@ export function MessageBubble({
             {isReactionDetailsVisible ? (
               <div
                 className={cn(
-                  "chat-reaction-picker-enter absolute bottom-[calc(100%+0.45rem)] z-20 w-72 overflow-hidden rounded-xl border border-border bg-background shadow-xl",
+                  "chat-bubble-enter absolute top-[calc(100%+0.45rem)] z-50 w-72 overflow-hidden rounded-xl border border-border bg-secondary shadow-xl",
                   message.isMine ? "right-0" : "left-0",
                 )}
               >
@@ -409,7 +415,7 @@ export function MessageBubble({
                         "inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-xs transition",
                         effectiveReactionTab === tab.key
                           ? "bg-primary/20 font-semibold text-foreground"
-                          : "text-muted-foreground hover:bg-secondary",
+                          : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5",
                       )}
                     >
                       <span>{tab.label}</span>
@@ -434,7 +440,7 @@ export function MessageBubble({
                         className={cn(
                           "flex w-full items-center gap-3 px-3 py-2 text-left transition",
                           detail.isMe
-                            ? "cursor-pointer hover:bg-secondary"
+                            ? "cursor-pointer hover:bg-black/5 dark:hover:bg-white/5"
                             : "cursor-default",
                         )}
                       >
